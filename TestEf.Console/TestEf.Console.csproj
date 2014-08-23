@@ -55,11 +55,8 @@
     <Compile Include="EfTypeConfigs.cs" />
     <Compile Include="Email.cs" />
     <Compile Include="IBaseEntity.cs" />
+    <Compile Include="ITenant.cs" />
     <Compile Include="MainDbContex.cs" />
-    <Compile Include="Migrations\201407230229242_initial.cs" />
-    <Compile Include="Migrations\201407230229242_initial.Designer.cs">
-      <DependentUpon>201407230229242_initial.cs</DependentUpon>
-    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="PhoneNumber.cs" />
     <Compile Include="Program.cs" />
@@ -74,9 +71,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201407230229242_initial.resx">
-      <DependentUpon>201407230229242_initial.cs</DependentUpon>
-    </EmbeddedResource>
+    <Folder Include="Tenant\" />
+    <Folder Include="User\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
