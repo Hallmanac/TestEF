@@ -1,18 +1,25 @@
 ﻿using System;
 using TestEf.Console.Core;
+using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Identity
 {
-    public class Email : IBaseEntity
+    public class Email : IBaseEntity, ITenant
     {
         public string EmailAddress { get; set; }
 
         public bool IsVerified { get; set; }
 
         public int UserId { get; set; }
+
         public int Id { get; set; }
 
         public DateTimeOffset LastModifiedOn { get; set; }
+
+        /// <summary>
+        /// Tenant Id for hosting multi-tenant applications
+        /// </summary>
+        public int TenantId { get; set; }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -31,8 +38,12 @@ namespace TestEf.Console.Identity
             {
                 return true;
             }
-            return Id == other.Id && string.Equals(EmailAddress, other.EmailAddress) && IsVerified.Equals(other.IsVerified) && UserId == other.UserId &&
-                   LastModifiedOn.Equals(other.LastModifiedOn);
+            return Id == other.Id
+                   && TenantId == other.TenantId
+                   && string.Equals(EmailAddress, other.EmailAddress)
+                   && IsVerified.Equals(other.IsVerified)
+                   && UserId == other.UserId
+                   && LastModifiedOn.Equals(other.LastModifiedOn);
         }
 
         /// <summary>
@@ -46,10 +57,8 @@ namespace TestEf.Console.Identity
             unchecked
             {
                 var hashCode = Id;
-                hashCode = (hashCode * 397) ^ (EmailAddress != null ? EmailAddress.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ IsVerified.GetHashCode();
                 hashCode = (hashCode * 397) ^ UserId;
-                hashCode = (hashCode * 397) ^ LastModifiedOn.GetHashCode();
+                hashCode = (hashCode * 397) ^ TenantId;
                 return hashCode;
             }
         }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Migrations;
 using System.Linq;
 using Newtonsoft.Json;
 using TestEf.Console.Identity;
+using TestEf.Console.Migrations;
 using TestEf.Console.Repo;
 using TestEf.Console.Tenant;
 
@@ -13,12 +15,33 @@ namespace TestEf.Console
     {
         private static void Main(string[] args)
         {
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<MainDbContext, Configuration>());
+            var mainMigrator = new DbMigrator(new Configuration());
+            mainMigrator.Update();
+
+            InitializeTenants();
+            InitializeUsers(50);
+            TestUserInteraction();
+            //DoSomething();
+
+            //using(var context = new MainDbContext())
+            //{
+            //    retrievedUser.PhoneNumbers.Clear();
+            //    retrievedUser.Emails.ToList().ForEach(eml => context.Entry(eml).State = EntityState.Deleted);
+            //    retrievedUser.Emails.Clear();
+            //    context.Entry(retrievedUser).State = EntityState.Deleted;
+            //    context.SaveChanges();
+            //}
+        }
+
+        private static void TestUserInteraction()
+        {
             using(var context = new MainDbContext())
             {
                 var existingUser = context.Users.Where(usr => string.Equals(usr.Username, "UserNumber0000"))
-                    .Include(usr => usr.PhoneNumbers)
-                    .Include(usr => usr.Emails)
-                    .ToList();
+                                          .Include(usr => usr.PhoneNumbers)
+                                          .Include(usr => usr.Emails)
+                                          .ToList();
                 if(existingUser.Count < 1)
                 {
                     context.Users.Add(new User
@@ -31,22 +54,8 @@ namespace TestEf.Console
                     context.SaveChanges();
                 }
             }
-
             System.Console.WriteLine("The new UserNumber0000 was saved properly.");
             System.Console.ReadLine();
-
-            //InitializeTenants();
-            //InitializeUsers();
-            //DoSomething();
-
-            //using(var context = new MainDbContext())
-            //{
-            //    retrievedUser.PhoneNumbers.Clear();
-            //    retrievedUser.Emails.ToList().ForEach(eml => context.Entry(eml).State = EntityState.Deleted);
-            //    retrievedUser.Emails.Clear();
-            //    context.Entry(retrievedUser).State = EntityState.Deleted;
-            //    context.SaveChanges();
-            //}
         }
 
         private static void InitializeTenants(int numberOfTenants = 5)
@@ -102,49 +111,51 @@ namespace TestEf.Console
                 tenants.AddRange(context.Tenants.ToList());
             }
 
-            // Create all the phone numbers
-            var phoneNumbers = new List<PhoneNumber>();
-            for(var i = 0; i < numberOfPhoneNumbers; i++)
-            {
-                phoneNumbers.Add(new PhoneNumber
-                {
-                    AreaCode = 407,
-                    PrefixNumber = 616,
-                    LineNumber = 9600 + (20 - i)
-                });
-            }
-
-            // Create all the users
             var users = new List<User>();
-            var phoneCount = 2;
-            var currentTenant = 0;
-            for(var i = 0; i < numberOfUsersToCreate; i++)
+            tenants.ForEach(tenant =>
             {
-                var user = new User
+                // Create all the phone numbers
+                var phoneNumbers = new List<PhoneNumber>();
+                for (var i = 0; i < numberOfPhoneNumbers; i++)
                 {
-                    Username = string.Format("UserNumber{0:0000}", i),
-                    FirstName = string.Format("Brian{0:0000}", i),
-                    LastName = string.Format("Hall{0:0000}", i)
-                };
-                user.Emails.Add(new Email
-                {
-                    EmailAddress = string.Format("Brian_{0:0000}@Hallmanac.com", i)
-                });
-                var lineNumber1 = 9600 + (20 - (phoneCount));
-                var lineNumber2 = lineNumber1 + 1;
-                user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber1));
-                user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber2));
-                phoneCount += 2;
-                if(phoneCount % numberOfPhoneNumbers == 0)
-                {
-                    phoneCount = 2;
+                    phoneNumbers.Add(new PhoneNumber
+                    {
+                        AreaCode = 407,
+                        PrefixNumber = 616,
+                        LineNumber = 9600 + (20 - i),
+                        TenantId = tenant.Id
+                    });
                 }
-                if(currentTenant + 1 > tenants.Count)
-                    currentTenant = 0;
-                user.TenantId = tenants[currentTenant].Id;
-                users.Add(user);
-                currentTenant++;
-            }
+
+                // Create all the users
+                var phoneCount = 2;
+                for (var i = 0; i < numberOfUsersToCreate; i++)
+                {
+                    var user = new User
+                    {
+                        Username = string.Format("UserNumber{0:0000}", i),
+                        FirstName = string.Format("Brian{0:0000}", i),
+                        LastName = string.Format("Hall{0:0000}", i)
+                    };
+                    user.Emails.Add(new Email
+                    {
+                        EmailAddress = string.Format("Brian_{0:0000}@Hallmanac.com", i),
+                        TenantId = tenant.Id
+                    });
+                    var lineNumber1 = 9600 + (20 - (phoneCount));
+                    var lineNumber2 = lineNumber1 + 1;
+                    user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber1));
+                    user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber2));
+                    phoneCount += 2;
+                    if (phoneCount % numberOfPhoneNumbers == 0)
+                    {
+                        phoneCount = 2;
+                    }
+                    user.TenantId = tenant.Id;
+                    users.Add(user);
+                }
+            });
+
             using(var context = new MainDbContext())
             {
                 context.Set<User>().AddRange(users);

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using TestEf.Console.Core;
+using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Identity
 {
-    public class PhoneNumber : IBaseEntity
+    public class PhoneNumber : IBaseEntity, ITenant, IEquatable<PhoneNumber>
     {
         private string _formattedNumber;
 
@@ -43,9 +44,18 @@ namespace TestEf.Console.Identity
             {
                 return true;
             }
-            return AreaCode == other.AreaCode && PrefixNumber == other.PrefixNumber && LineNumber == other.LineNumber &&
-                   Id == other.Id && LastModifiedOn.Equals(other.LastModifiedOn);
+            return AreaCode == other.AreaCode
+                   && TenantId == other.TenantId
+                   && PrefixNumber == other.PrefixNumber
+                   && LineNumber == other.LineNumber
+                   && Id == other.Id
+                   && LastModifiedOn.Equals(other.LastModifiedOn);
         }
+
+        /// <summary>
+        /// Tenant Id for hosting multi-tenant applications
+        /// </summary>
+        public int TenantId { get; set; }
 
         /// <summary>
         /// Serves as a hash function for a particular type. 
@@ -62,6 +72,7 @@ namespace TestEf.Console.Identity
                 hashCode = (hashCode * 397) ^ LineNumber;
                 hashCode = (hashCode * 397) ^ AreaCode;
                 hashCode = (hashCode * 397) ^ LastModifiedOn.GetHashCode();
+                hashCode = (hashCode * 397) ^ TenantId;
                 return hashCode;
             }
         }

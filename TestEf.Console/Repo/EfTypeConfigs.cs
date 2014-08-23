@@ -58,12 +58,23 @@ namespace TestEf.Console.Repo
                 .IsRequired()
                 .HasColumnOrder(2)
                 .HasMaxLength(256)
-                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("EmailIndex") {IsUnique = true}));
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("EmailIndex", 2) {IsUnique = true}));
+            Property(eml => eml.TenantId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("EmailIndex", 1) {IsUnique = true}));
         }
     }
 
     public class PhoneNumberConfig : EntityTypeConfiguration<PhoneNumber>
     {
-        public PhoneNumberConfig() { Property(ph => ph.FormattedNumber).IsRequired().HasColumnOrder(2).HasMaxLength(32); }
+        public PhoneNumberConfig()
+        {
+            Property(ph => ph.FormattedNumber)
+                .IsRequired()
+                .HasColumnOrder(2)
+                .HasMaxLength(32)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("IX_TenantFormattedNumber", 2) {IsUnique = false}));
+            Property(ph => ph.TenantId)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("IX_TenantFormattedNumber", 1) {IsUnique = false}));
+        }
     }
 }
