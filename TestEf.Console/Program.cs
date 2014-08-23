@@ -1,24 +1,43 @@
-﻿using TestEf.Console.Identity;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using Newtonsoft.Json;
+using TestEf.Console.Identity;
 using TestEf.Console.Repo;
 using TestEf.Console.Tenant;
 
 namespace TestEf.Console
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data.Entity;
-    using System.Linq;
-    using Newtonsoft.Json;
-
     internal class Program
     {
         private static void Main(string[] args)
         {
-            Initialize2Users();
-            
-            InitializeUsers();
+            using(var context = new MainDbContext())
+            {
+                var existingUser = context.Users.Where(usr => string.Equals(usr.Username, "UserNumber0000"))
+                    .Include(usr => usr.PhoneNumbers)
+                    .Include(usr => usr.Emails)
+                    .ToList();
+                if(existingUser.Count < 1)
+                {
+                    context.Users.Add(new User
+                    {
+                        Username = string.Format("UserNumber{0:0000}", 0),
+                        FirstName = "First",
+                        LastName = "Last",
+                        TenantId = 2
+                    });
+                    context.SaveChanges();
+                }
+            }
 
-            DoSomething();
+            System.Console.WriteLine("The new UserNumber0000 was saved properly.");
+            System.Console.ReadLine();
+
+            //InitializeTenants();
+            //InitializeUsers();
+            //DoSomething();
 
             //using(var context = new MainDbContext())
             //{
@@ -30,27 +49,33 @@ namespace TestEf.Console
             //}
         }
 
-        private static void Initialize2Users()
+        private static void InitializeTenants(int numberOfTenants = 5)
         {
-            using(var Context = new MainDbContext())
-            {
-                
-            }
-        }
-
-        private static void InitializeTenants()
-        {
-            var tenant1 = new TenantInfo {TenantName = "Tenant 1"};
-            var tenant2 = new TenantInfo {TenantName = "Tenant 2"};
-
+            List<TenantInfo> tenants;
             using(var context = new MainDbContext())
             {
-                
+                tenants = context.Tenants.ToList();
+            }
+            if(tenants.Count > 0)
+                return;
+            
+            for(var i = 1; i <= numberOfTenants; i++)
+            {
+                tenants.Add(new TenantInfo
+                {
+                    TenantName = string.Format("Tenant {0}", i)
+                });
+            }
+            using(var context = new MainDbContext())
+            {
+                context.Tenants.AddRange(tenants);
+                context.SaveChanges();
             }
         }
 
-        public static void InitializeUsers()
+        public static void InitializeUsers(int numberOfUsersToCreate = 20, int numberOfPhoneNumbers = 20)
         {
+            // --- First delete existing users --- //
             var usersCount = 0;
             using(var context = new MainDbContext())
             {
@@ -67,8 +92,19 @@ namespace TestEf.Console
                     context.SaveChanges();
                 }
             }
+
+            // --- Next create the users --- //
+
+            // Get the tenants
+            var tenants = new List<TenantInfo>();
+            using(var context = new MainDbContext())
+            {
+                tenants.AddRange(context.Tenants.ToList());
+            }
+
+            // Create all the phone numbers
             var phoneNumbers = new List<PhoneNumber>();
-            for(var i = 0; i < 20; i++)
+            for(var i = 0; i < numberOfPhoneNumbers; i++)
             {
                 phoneNumbers.Add(new PhoneNumber
                 {
@@ -77,12 +113,16 @@ namespace TestEf.Console
                     LineNumber = 9600 + (20 - i)
                 });
             }
+
+            // Create all the users
             var users = new List<User>();
             var phoneCount = 2;
-            for(var i = 0; i < 100; i++)
+            var currentTenant = 0;
+            for(var i = 0; i < numberOfUsersToCreate; i++)
             {
                 var user = new User
                 {
+                    Username = string.Format("UserNumber{0:0000}", i),
                     FirstName = string.Format("Brian{0:0000}", i),
                     LastName = string.Format("Hall{0:0000}", i)
                 };
@@ -95,11 +135,15 @@ namespace TestEf.Console
                 user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber1));
                 user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber2));
                 phoneCount += 2;
-                if(phoneCount % 20 == 0)
+                if(phoneCount % numberOfPhoneNumbers == 0)
                 {
                     phoneCount = 2;
                 }
+                if(currentTenant + 1 > tenants.Count)
+                    currentTenant = 0;
+                user.TenantId = tenants[currentTenant].Id;
                 users.Add(user);
+                currentTenant++;
             }
             using(var context = new MainDbContext())
             {
@@ -110,14 +154,13 @@ namespace TestEf.Console
                 //}
                 context.SaveChanges();
             }
-            
         }
 
         public static void DoSomething()
         {
             User currentUser;
             PhoneNumber phone;
-            using (var context = new MainDbContext())
+            using(var context = new MainDbContext())
             {
                 //============= Experiment ===============//
                 var random = new Random();
@@ -126,12 +169,11 @@ namespace TestEf.Console
                 var theUser = (from user in context.Users
                                join email in context.Emails on user.Id equals email.UserId
                                where ((searchUserId != 0 && user.Id == searchUserId)
-                                     && (!string.Equals(somestring, "blah") && string.Equals(somestring, email.EmailAddress)))
+                                      && (!string.Equals(somestring, "blah") && string.Equals(somestring, email.EmailAddress)))
                                select user).FirstOrDefault();
                 //======== End Experiment ============//
-
                 currentUser = context.Users.FirstOrDefault(usr => usr.FirstName == "Brian0052");
-                if (currentUser != null)
+                if(currentUser != null)
                 {
                     currentUser.Emails = context.Emails.Where(e => e.UserId == currentUser.Id).ToList();
                     //currentUser.PhoneNumbers = context.Users.Where(usr => usr.Id == currentUser.Id)
@@ -145,12 +187,12 @@ namespace TestEf.Console
                 //currentUser.PhoneNumbers = query.ToList();
                 //phone = currentUser.PhoneNumbers.FirstOrDefault();
             }
-            if (currentUser != null)
+            if(currentUser != null)
             {
                 currentUser.Emails.ForEach(eml => eml.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.PhoneNumbers.ForEach(p => p.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.LastModifiedOn = DateTimeOffset.UtcNow;
-                using (var context = new MainDbContext())
+                using(var context = new MainDbContext())
                 {
                     //context.Users.Attach(currentUser);
                     context.Entry(currentUser).State = EntityState.Modified;
@@ -158,9 +200,9 @@ namespace TestEf.Console
                     currentUser.PhoneNumbers.ForEach(ph => context.Entry(ph).State = EntityState.Modified);
                     context.SaveChanges();
                 }
-                Console.WriteLine("The current user is:\n");
-                Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
-                    new JsonSerializerSettings { PreserveReferencesHandling = PreserveReferencesHandling.Objects }));
+                System.Console.WriteLine("The current user is:\n");
+                System.Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
+                    new JsonSerializerSettings {PreserveReferencesHandling = PreserveReferencesHandling.Objects}));
             }
             var listOfUsers = new List<User>();
             User retrievedUser;
@@ -171,7 +213,7 @@ namespace TestEf.Console
                 "Brian0051",
                 "Brian0052"
             };
-            using (var context = new MainDbContext())
+            using(var context = new MainDbContext())
             {
                 retrievedUser = context.Users
                                        .Include(usr => usr.Emails)

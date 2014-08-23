@@ -10,6 +10,7 @@ namespace TestEf.Console.Repo
     {
         public TenantInfoConfig()
         {
+            ToTable("Tenants");
             Property(tenant => tenant.TenantName)
                 .IsRequired()
                 .HasMaxLength(256)
