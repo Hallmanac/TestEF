@@ -52,11 +52,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EfTypeConfigs.cs" />
+    <Compile Include="Repo\EfTypeConfigs.cs" />
     <Compile Include="Identity\Email.cs" />
     <Compile Include="Core\IBaseEntity.cs" />
     <Compile Include="Tenant\ITenant.cs" />
-    <Compile Include="MainDbContex.cs" />
+    <Compile Include="Repo\MainDbContext.cs" />
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Identity\PhoneNumber.cs" />
     <Compile Include="Program.cs" />

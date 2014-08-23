@@ -1,11 +1,10 @@
-﻿using TestEf.Console.Identity;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Entity.Infrastructure.Annotations;
+using System.Data.Entity.ModelConfiguration;
+using TestEf.Console.Identity;
 
-namespace TestEf.Console
+namespace TestEf.Console.Repo
 {
-    using System.ComponentModel.DataAnnotations.Schema;
-    using System.Data.Entity.Infrastructure.Annotations;
-    using System.Data.Entity.ModelConfiguration;
-
     public class UserTypeConfig : EntityTypeConfiguration<User>
     {
         public UserTypeConfig()
@@ -42,7 +41,6 @@ namespace TestEf.Console
         {
             Property(ph => ph.Id).HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).HasColumnOrder(1);
             Property(ph => ph.FormattedNumber).IsRequired().HasColumnOrder(2).HasMaxLength(32);
-            
         }
     }
 }

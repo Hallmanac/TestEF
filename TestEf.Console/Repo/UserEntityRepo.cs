@@ -7,7 +7,7 @@ namespace TestEf.Console.Repo
     using System.Linq;
     using System.Threading.Tasks;
 
-    public class UserEntityRepo : BaseSqlRepo<User, MainDbContex>
+    public class UserEntityRepo : BaseSqlRepo<User, MainDbContext>
     {
         /// <summary>
         /// Gets an object by its Guid based ID
@@ -20,7 +20,7 @@ namespace TestEf.Console.Repo
             {
                 return null;
             }
-            using(Context = new MainDbContex())
+            using(Context = new MainDbContext())
             {
                 var user = await Context.Users
                                     .Include(usr => usr.PhoneNumbers)
@@ -47,7 +47,7 @@ namespace TestEf.Console.Repo
                     continue;// Keep building the commitList until we've met the commit count and then we'll go to the database
 
                 // Now that we've reached the max count for the current batch save, we save.
-                using(Context = new MainDbContex())
+                using(Context = new MainDbContext())
                 {
                     foreach(var user in commitList)
                     {
@@ -83,7 +83,7 @@ namespace TestEf.Console.Repo
                 }
 
                 // Now that we've reached the max count for the current batch save, we save.
-                using (Context = new MainDbContex())
+                using (Context = new MainDbContext())
                 {
                     foreach (var user in commitList)
                     {
@@ -136,7 +136,7 @@ namespace TestEf.Console.Repo
             // keep track of what email addresses have been deleted.
             List<PhoneNumber> dbItems;
             var phIds = users.SelectMany(u => u.PhoneNumbers.Select(p => p.Id)).ToList();
-            using(Context = new MainDbContex())
+            using(Context = new MainDbContext())
             {
                 dbItems = await (from phNum in Context.PhoneNumbers
                                  where phIds.Any(pid => pid == phNum.Id)
@@ -166,7 +166,7 @@ namespace TestEf.Console.Repo
             // Get the database versions of the givenItems for comparison. We'll get them based on the UserEntityId property so we can also 
             // keep track of what email addresses have been deleted.
             List<Email> dbItems;
-            using(Context = new MainDbContex())
+            using(Context = new MainDbContext())
             {
                 dbItems = await (from eml in Context.Emails
                                  from usr in Context.Users

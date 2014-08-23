@@ -1,4 +1,5 @@
 ﻿using TestEf.Console.Identity;
+using TestEf.Console.Repo;
 
 namespace TestEf.Console
 {
@@ -74,7 +75,7 @@ namespace TestEf.Console
             
             User currentUser;
             PhoneNumber phone;
-            using(var context = new MainDbContex())
+            using(var context = new MainDbContext())
             {
                 //============= Experiment ===============//
                 var random = new Random();
@@ -107,7 +108,7 @@ namespace TestEf.Console
                 currentUser.Emails.ForEach(eml => eml.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.PhoneNumbers.ForEach(p => p.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.LastModifiedOn = DateTimeOffset.UtcNow;
-                using(var context = new MainDbContex())
+                using(var context = new MainDbContext())
                 {
                     //context.Users.Attach(currentUser);
                     context.Entry(currentUser).State = EntityState.Modified;
@@ -128,7 +129,7 @@ namespace TestEf.Console
                 "Brian0051",
                 "Brian0052"
             };
-            using(var context = new MainDbContex())
+            using(var context = new MainDbContext())
             {
                 retrievedUser = context.Users
                                        .Include(usr => usr.Emails)

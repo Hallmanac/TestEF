@@ -1,12 +1,11 @@
-﻿using TestEf.Console.Identity;
+﻿using System.Data.Entity;
+using TestEf.Console.Identity;
 
-namespace TestEf.Console
+namespace TestEf.Console.Repo
 {
-    using System.Data.Entity;
-
-    public class MainDbContex : DbContext
+    public class MainDbContext : DbContext
     {
-        public MainDbContex()
+        public MainDbContext()
             : base("name=TestEfConnection")
         {
             Configuration.AutoDetectChangesEnabled = false;
