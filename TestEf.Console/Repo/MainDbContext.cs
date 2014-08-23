@@ -1,5 +1,7 @@
-﻿using System.Data.Entity;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Entity;
 using TestEf.Console.Identity;
+using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Repo
 {
@@ -19,6 +21,8 @@ namespace TestEf.Console.Repo
 
         public DbSet<PhoneNumber> PhoneNumbers { get; set; }
 
+        public DbSet<TenantInfo> Tenants { get; set; }
+
         /// <summary>
         /// This method is called when the model for a derived context has been initialized, but
         ///             before the model has been locked down and used to initialize the context.  The default
@@ -36,6 +40,12 @@ namespace TestEf.Console.Repo
         /// <param name="modelBuilder">The builder that defines the model for the context being created. </param>
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
+            modelBuilder.Properties<int>().Where(p => p.Name == "Id")
+                        .Configure(p => p.HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity)
+                                         .HasColumnOrder(1)
+                                         .IsKey());
+
+            modelBuilder.Configurations.Add(new TenantInfoConfig());
             modelBuilder.Configurations.Add(new UserTypeConfig());
             modelBuilder.Configurations.Add(new EmailTypeConfig());
             modelBuilder.Configurations.Add(new PhoneNumberConfig());

@@ -2,16 +2,43 @@
 using System.Data.Entity.Infrastructure.Annotations;
 using System.Data.Entity.ModelConfiguration;
 using TestEf.Console.Identity;
+using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Repo
 {
+    public class TenantInfoConfig : EntityTypeConfiguration<TenantInfo>
+    {
+        public TenantInfoConfig()
+        {
+            Property(tenant => tenant.TenantName)
+                .IsRequired()
+                .HasMaxLength(256)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("IX_TenantName") {IsUnique = true}));
+        }
+    }
+
     public class UserTypeConfig : EntityTypeConfiguration<User>
     {
         public UserTypeConfig()
         {
-            Property(usr => usr.Id).HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).HasColumnOrder(1);
             Property(usr => usr.FirstName).IsRequired().HasColumnOrder(2).HasMaxLength(64);
             Property(usr => usr.LastName).IsRequired().HasColumnOrder(3).HasMaxLength(64);
+            Property(usr => usr.Username)
+                .IsRequired()
+                .HasColumnOrder(4)
+                .HasMaxLength(256)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("TenantUsername", 2)
+                {
+                    IsClustered = false,
+                    IsUnique = true
+                }));
+            Property(usr => usr.TenantId)
+                .HasColumnOrder(5)
+                .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("TenantUsername", 1)
+                {
+                    IsClustered = false,
+                    IsUnique = true
+                }));
             HasMany(usr => usr.Emails).WithRequired().HasForeignKey(eml => eml.UserId);
             HasMany(usr => usr.PhoneNumbers).WithMany(ph => ph.Users).Map(m =>
             {
@@ -26,7 +53,6 @@ namespace TestEf.Console.Repo
     {
         public EmailTypeConfig()
         {
-            Property(eml => eml.Id).HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).HasColumnOrder(1);
             Property(eml => eml.EmailAddress)
                 .IsRequired()
                 .HasColumnOrder(2)
@@ -37,10 +63,6 @@ namespace TestEf.Console.Repo
 
     public class PhoneNumberConfig : EntityTypeConfiguration<PhoneNumber>
     {
-        public PhoneNumberConfig()
-        {
-            Property(ph => ph.Id).HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).HasColumnOrder(1);
-            Property(ph => ph.FormattedNumber).IsRequired().HasColumnOrder(2).HasMaxLength(32);
-        }
+        public PhoneNumberConfig() { Property(ph => ph.FormattedNumber).IsRequired().HasColumnOrder(2).HasMaxLength(32); }
     }
 }

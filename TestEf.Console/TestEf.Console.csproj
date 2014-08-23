@@ -52,6 +52,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Migrations\201408231718584_v00_00_01_001.cs" />
+    <Compile Include="Migrations\201408231718584_v00_00_01_001.Designer.cs">
+      <DependentUpon>201408231718584_v00_00_01_001.cs</DependentUpon>
+    </Compile>
     <Compile Include="Repo\EfTypeConfigs.cs" />
     <Compile Include="Identity\Email.cs" />
     <Compile Include="Core\IBaseEntity.cs" />
@@ -65,12 +69,17 @@
     <Compile Include="Repo\IBaseEntityRepo.cs" />
     <Compile Include="Repo\UserEntityRepo.cs" />
     <Compile Include="Identity\User.cs" />
+    <Compile Include="Tenant\TenantInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\201408231718584_v00_00_01_001.resx">
+      <DependentUpon>201408231718584_v00_00_01_001.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

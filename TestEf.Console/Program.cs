@@ -1,5 +1,6 @@
 ﻿using TestEf.Console.Identity;
 using TestEf.Console.Repo;
+using TestEf.Console.Tenant;
 
 namespace TestEf.Console
 {
@@ -13,69 +14,110 @@ namespace TestEf.Console
     {
         private static void Main(string[] args)
         {
-            //var usersCount = 0;
-            //using(var context = new MainDbContex())
+            Initialize2Users();
+            
+            InitializeUsers();
+
+            DoSomething();
+
+            //using(var context = new MainDbContext())
             //{
-            //    usersCount = context.Users.Count();
-            //}
-            //if(usersCount > 0)
-            //{
-            //    using(var context = new MainDbContex())
-            //    {
-            //        var phoneNumbersToDelete = context.PhoneNumbers.ToList();
-            //        var usersList = context.Users.ToList();
-            //        usersList.ForEach(usr => context.Entry(usr).State = EntityState.Deleted);
-            //        phoneNumbersToDelete.ForEach(ph => context.Entry(ph).State = EntityState.Deleted);
-            //        context.SaveChanges();
-            //    }
-            //}
-            //var phoneNumbers = new List<PhoneNumber>();
-            //for(var i = 0; i < 20; i++)
-            //{
-            //    phoneNumbers.Add(new PhoneNumber
-            //    {
-            //        AreaCode = 407,
-            //        PrefixNumber = 616,
-            //        LineNumber = 9600 + (20 - i)
-            //    });
-            //}
-            //var users = new List<User>();
-            //var phoneCount = 2;
-            //for(var i = 0; i < 100; i++)
-            //{
-            //    var user = new User
-            //    {
-            //        FirstName = string.Format("Brian{0:0000}", i),
-            //        LastName = string.Format("Hall{0:0000}", i)
-            //    };
-            //    user.Emails.Add(new Email
-            //    {
-            //        EmailAddress = string.Format("Brian_{0:0000}@Hallmanac.com", i)
-            //    });
-            //    var lineNumber1 = 9600 + (20 - (phoneCount));
-            //    var lineNumber2 = lineNumber1 + 1;
-            //    user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber1));
-            //    user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber2));
-            //    phoneCount += 2;
-            //    if(phoneCount % 20 == 0)
-            //    {
-            //        phoneCount = 2;
-            //    }
-            //    users.Add(user);
-            //}
-            //using(var context = new MainDbContex())
-            //{
-            //    context.Set<User>().AddRange(users);
-            //    //foreach(var newUser in users)
-            //    //{
-            //    //    context.Users.Add(newUser);
-            //    //}
+            //    retrievedUser.PhoneNumbers.Clear();
+            //    retrievedUser.Emails.ToList().ForEach(eml => context.Entry(eml).State = EntityState.Deleted);
+            //    retrievedUser.Emails.Clear();
+            //    context.Entry(retrievedUser).State = EntityState.Deleted;
             //    context.SaveChanges();
             //}
+        }
+
+        private static void Initialize2Users()
+        {
+            using(var Context = new MainDbContext())
+            {
+                
+            }
+        }
+
+        private static void InitializeTenants()
+        {
+            var tenant1 = new TenantInfo {TenantName = "Tenant 1"};
+            var tenant2 = new TenantInfo {TenantName = "Tenant 2"};
+
+            using(var context = new MainDbContext())
+            {
+                
+            }
+        }
+
+        public static void InitializeUsers()
+        {
+            var usersCount = 0;
+            using(var context = new MainDbContext())
+            {
+                usersCount = context.Users.Count();
+            }
+            if(usersCount > 0)
+            {
+                using(var context = new MainDbContext())
+                {
+                    var phoneNumbersToDelete = context.PhoneNumbers.ToList();
+                    var usersList = context.Users.ToList();
+                    usersList.ForEach(usr => context.Entry(usr).State = EntityState.Deleted);
+                    phoneNumbersToDelete.ForEach(ph => context.Entry(ph).State = EntityState.Deleted);
+                    context.SaveChanges();
+                }
+            }
+            var phoneNumbers = new List<PhoneNumber>();
+            for(var i = 0; i < 20; i++)
+            {
+                phoneNumbers.Add(new PhoneNumber
+                {
+                    AreaCode = 407,
+                    PrefixNumber = 616,
+                    LineNumber = 9600 + (20 - i)
+                });
+            }
+            var users = new List<User>();
+            var phoneCount = 2;
+            for(var i = 0; i < 100; i++)
+            {
+                var user = new User
+                {
+                    FirstName = string.Format("Brian{0:0000}", i),
+                    LastName = string.Format("Hall{0:0000}", i)
+                };
+                user.Emails.Add(new Email
+                {
+                    EmailAddress = string.Format("Brian_{0:0000}@Hallmanac.com", i)
+                });
+                var lineNumber1 = 9600 + (20 - (phoneCount));
+                var lineNumber2 = lineNumber1 + 1;
+                user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber1));
+                user.PhoneNumbers.Add(phoneNumbers.FirstOrDefault(ph => ph.LineNumber == lineNumber2));
+                phoneCount += 2;
+                if(phoneCount % 20 == 0)
+                {
+                    phoneCount = 2;
+                }
+                users.Add(user);
+            }
+            using(var context = new MainDbContext())
+            {
+                context.Set<User>().AddRange(users);
+                //foreach(var newUser in users)
+                //{
+                //    context.Users.Add(newUser);
+                //}
+                context.SaveChanges();
+            }
             
+        }
+
+        public static void DoSomething()
+        {
             User currentUser;
             PhoneNumber phone;
-            using(var context = new MainDbContext())
+            using (var context = new MainDbContext())
             {
                 //============= Experiment ===============//
                 var random = new Random();
@@ -89,7 +131,7 @@ namespace TestEf.Console
                 //======== End Experiment ============//
 
                 currentUser = context.Users.FirstOrDefault(usr => usr.FirstName == "Brian0052");
-                if(currentUser != null)
+                if (currentUser != null)
                 {
                     currentUser.Emails = context.Emails.Where(e => e.UserId == currentUser.Id).ToList();
                     //currentUser.PhoneNumbers = context.Users.Where(usr => usr.Id == currentUser.Id)
@@ -103,12 +145,12 @@ namespace TestEf.Console
                 //currentUser.PhoneNumbers = query.ToList();
                 //phone = currentUser.PhoneNumbers.FirstOrDefault();
             }
-            if(currentUser != null)
+            if (currentUser != null)
             {
                 currentUser.Emails.ForEach(eml => eml.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.PhoneNumbers.ForEach(p => p.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.LastModifiedOn = DateTimeOffset.UtcNow;
-                using(var context = new MainDbContext())
+                using (var context = new MainDbContext())
                 {
                     //context.Users.Attach(currentUser);
                     context.Entry(currentUser).State = EntityState.Modified;
@@ -118,7 +160,7 @@ namespace TestEf.Console
                 }
                 Console.WriteLine("The current user is:\n");
                 Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
-                    new JsonSerializerSettings {PreserveReferencesHandling = PreserveReferencesHandling.Objects}));
+                    new JsonSerializerSettings { PreserveReferencesHandling = PreserveReferencesHandling.Objects }));
             }
             var listOfUsers = new List<User>();
             User retrievedUser;
@@ -129,7 +171,7 @@ namespace TestEf.Console
                 "Brian0051",
                 "Brian0052"
             };
-            using(var context = new MainDbContext())
+            using (var context = new MainDbContext())
             {
                 retrievedUser = context.Users
                                        .Include(usr => usr.Emails)
@@ -146,14 +188,6 @@ namespace TestEf.Console
                              where listOfUPhoneIds.Any(pid => pid == phNum.Id)
                              select phNum).Include(p => p.Users).ToList();
             }
-            //using(var context = new MainDbContex())
-            //{
-            //    retrievedUser.PhoneNumbers.Clear();
-            //    retrievedUser.Emails.ToList().ForEach(eml => context.Entry(eml).State = EntityState.Deleted);
-            //    retrievedUser.Emails.Clear();
-            //    context.Entry(retrievedUser).State = EntityState.Deleted;
-            //    context.SaveChanges();
-            //}
         }
     }
 }
