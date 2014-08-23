@@ -1,4 +1,6 @@
-﻿namespace TestEf.Console.Repo
+﻿using TestEf.Console.Identity;
+
+namespace TestEf.Console.Repo
 {
     using System.Collections.Generic;
     using System.Data.Entity;

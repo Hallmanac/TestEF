@@ -1,4 +1,6 @@
-﻿namespace TestEf.Console
+﻿using TestEf.Console.Identity;
+
+namespace TestEf.Console
 {
     using System.ComponentModel.DataAnnotations.Schema;
     using System.Data.Entity.Infrastructure.Annotations;

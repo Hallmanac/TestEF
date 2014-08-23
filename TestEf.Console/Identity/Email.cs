@@ -1,7 +1,8 @@
-﻿namespace TestEf.Console
-{
-    using System;
+﻿using System;
+using TestEf.Console.Core;
 
+namespace TestEf.Console.Identity
+{
     public class Email : IBaseEntity
     {
         public string EmailAddress { get; set; }

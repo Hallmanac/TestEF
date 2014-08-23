@@ -1,4 +1,6 @@
-﻿namespace TestEf.Console
+﻿using TestEf.Console.Identity;
+
+namespace TestEf.Console
 {
     using System;
     using System.Collections.Generic;

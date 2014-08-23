@@ -1,4 +1,6 @@
-﻿namespace TestEf.Console.Repo
+﻿using TestEf.Console.Core;
+
+namespace TestEf.Console.Repo
 {
     using System;
     using System.Linq;

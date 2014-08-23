@@ -1,7 +1,7 @@
-﻿namespace TestEf.Console
-{
-    using System;
+﻿using System;
 
+namespace TestEf.Console.Core
+{
     public interface IBaseEntity
     {
         int Id { get; set; } 

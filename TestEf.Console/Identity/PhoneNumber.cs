@@ -1,8 +1,9 @@
-﻿namespace TestEf.Console
-{
-    using System;
-    using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using TestEf.Console.Core;
 
+namespace TestEf.Console.Identity
+{
     public class PhoneNumber : IBaseEntity
     {
         private string _formattedNumber;
