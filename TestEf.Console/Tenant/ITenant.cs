@@ -2,6 +2,9 @@
 {
     public interface ITenant
     {
-        int TenantId { get; set; } 
+        /// <summary>
+        /// Tenant Id for hosting multi-tenant applications
+        /// </summary>
+        int TenantId { get; set; }
     }
 }
