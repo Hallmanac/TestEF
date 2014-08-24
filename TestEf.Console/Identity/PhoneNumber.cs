@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using TestEf.Console.Core;
+using TestEf.Console.Repo;
 using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Identity
 {
-    public class PhoneNumber : IBaseEntity, ITenant, IEquatable<PhoneNumber>
+    public class PhoneNumber : IBaseEntity, ITenant, IEquatable<PhoneNumber>, IUserManyToManyCollection
     {
         private string _formattedNumber;
 

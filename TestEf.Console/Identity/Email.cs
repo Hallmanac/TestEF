@@ -1,10 +1,11 @@
 ﻿using System;
 using TestEf.Console.Core;
+using TestEf.Console.Repo;
 using TestEf.Console.Tenant;
 
 namespace TestEf.Console.Identity
 {
-    public class Email : IBaseEntity, ITenant
+    public class Email : IBaseEntity, ITenant, IUserCollection, IEquatable<Email>
     {
         public string EmailAddress { get; set; }
 

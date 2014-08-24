@@ -20,7 +20,7 @@ namespace TestEf.Console
             mainMigrator.Update();
 
             InitializeTenants();
-            InitializeUsers(50);
+            InitializeUsers(55);
             TestUserInteraction();
             //DoSomething();
 
@@ -36,23 +36,18 @@ namespace TestEf.Console
 
         private static void TestUserInteraction()
         {
-            using(var context = new MainDbContext())
+            var usersRepo = new UserRepo();
+            var existingUsr = usersRepo.GetByUsernameAsync("userNumber0000").Result;
+            if(existingUsr == null)
             {
-                var existingUser = context.Users.Where(usr => string.Equals(usr.Username, "UserNumber0000"))
-                                          .Include(usr => usr.PhoneNumbers)
-                                          .Include(usr => usr.Emails)
-                                          .ToList();
-                if(existingUser.Count < 1)
+                var newUsr = new User
                 {
-                    context.Users.Add(new User
-                    {
-                        Username = string.Format("UserNumber{0:0000}", 0),
-                        FirstName = "First",
-                        LastName = "Last",
-                        TenantId = 2
-                    });
-                    context.SaveChanges();
-                }
+                    Username = string.Format("UserNumber{0:0000}", 0),
+                    FirstName = "First",
+                    LastName = "Last",
+                    TenantId = 2
+                };
+                usersRepo.SaveFullEntitiesAsync(new[] {newUsr}).Wait();
             }
             System.Console.WriteLine("The new UserNumber0000 was saved properly.");
             System.Console.ReadLine();
@@ -84,15 +79,19 @@ namespace TestEf.Console
 
         public static void InitializeUsers(int numberOfUsersToCreate = 20, int numberOfPhoneNumbers = 20)
         {
+            var usersRepo = new UserRepo();
+            
             // --- First delete existing users --- //
             var usersCount = 0;
-            using(var context = new MainDbContext())
+            using(var tempRepo = new UserRepo())
             {
-                usersCount = context.Users.Count();
+                usersCount = tempRepo.DbSet().Count();
             }
+            
+            // Delete all existing users
             if(usersCount > 0)
             {
-                using(var context = new MainDbContext())
+                using(var context = usersRepo.DbContext())
                 {
                     var phoneNumbersToDelete = context.PhoneNumbers.ToList();
                     var usersList = context.Users.ToList();
@@ -155,16 +154,10 @@ namespace TestEf.Console
                     users.Add(user);
                 }
             });
+            //usersRepo.SaveFullEntitiesAsync(users.ToArray()).Wait();
+            usersRepo.InsertAsync(users.ToArray()).Wait();
+            usersRepo.Dispose();
 
-            using(var context = new MainDbContext())
-            {
-                context.Set<User>().AddRange(users);
-                //foreach(var newUser in users)
-                //{
-                //    context.Users.Add(newUser);
-                //}
-                context.SaveChanges();
-            }
         }
 
         public static void DoSomething()

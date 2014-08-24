@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Threading.Tasks;
 using TestEf.Console.Core;
 
 namespace TestEf.Console.Repo
 {
-    public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject> where TModelObject : class, IBaseEntity, new()
+    public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject, TContext> where TModelObject : class, IBaseEntity, new()
                                                                                                     where TContext : DbContext, new()
     {
         protected TContext Context;
@@ -48,6 +49,12 @@ namespace TestEf.Console.Repo
         }
         #endregion
 
+        public TContext DbContext()
+        {
+            var context = new TContext();
+            return context;
+        }
+        
         /// <summary>
         /// Returns an IQueryable<typeparam name="TModelObject"></typeparam>. This is more for use with Entity Framework or
         /// providers like it that support IQueryable. Azure Table Storage doesn't currently support IQueryable (as of 2013-08-20) so
@@ -55,7 +62,7 @@ namespace TestEf.Console.Repo
         /// for Azure Table Storage is fully implemented.
         /// </summary>
         /// <returns></returns>
-        public IQueryable<TModelObject> DbSet()
+        public DbSet<TModelObject> DbSet()
         {
             Context = new TContext();
             Context.Configuration.AutoDetectChangesEnabled = true;
@@ -207,13 +214,6 @@ namespace TestEf.Console.Repo
                            where !givenItem.Equals(dbItem)
                            select givenItem).ToList();
             
-            // We find which items need to be deleted by getting all the dbItems that aren't in the givenItems
-            var deletes = dbItems.Where(dbItem => givenItems.All(givenItem => givenItem.Id != dbItem.Id)).ToList();
-
-            if (deletes.Count > 0)
-            {
-                await SaveSqlEntitiesAsBatchAsync(deletes.ToArray(), EntityState.Deleted).ConfigureAwait(false);
-            }
             if (inserts.Count > 0)
             {
                 await SaveSqlEntitiesAsBatchAsync(inserts.ToArray(), EntityState.Added).ConfigureAwait(false);

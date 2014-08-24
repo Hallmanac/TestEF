@@ -7,8 +7,10 @@ using TestEf.Console.Core;
 
 namespace TestEf.Console.Repo
 {
-    public interface IBaseEntityRepo<TModelObject> : IDisposable where TModelObject : class, IBaseEntity, new()
+    public interface IBaseEntityRepo<TModelObject, out TContext> : IDisposable where TModelObject : class, IBaseEntity, new() where TContext : DbContext, new()
     {
+        TContext DbContext();
+        
         /// <summary>
         /// Returns an IQueryable<typeparam name="TModelObject"></typeparam>. This is more for use with Entity Framework or
         /// providers like it that support IQueryable. Azure Table Storage doesn't currently support IQueryable (as of 2013-08-20) so
@@ -16,7 +18,7 @@ namespace TestEf.Console.Repo
         /// for Azure Table Storage is fully implemented.
         /// </summary>
         /// <returns></returns>
-        IQueryable<TModelObject> DbSet();
+        DbSet<TModelObject> DbSet();
 
         Task<List<TModelObject>> GetByIdsAsync(int[] ids);
 

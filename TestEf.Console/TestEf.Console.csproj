@@ -69,6 +69,7 @@
     <Compile Include="Identity\Email.cs" />
     <Compile Include="Core\IBaseEntity.cs" />
     <Compile Include="Repo\IBaseEntityRepo.cs" />
+    <Compile Include="Repo\UserRepo.cs" />
     <Compile Include="Tenant\ITenant.cs" />
     <Compile Include="Repo\MainDbContext.cs" />
     <Compile Include="Migrations\Configuration.cs" />
