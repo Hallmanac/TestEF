@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Migrations;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using TestEf.Console.Identity;
 using TestEf.Console.Migrations;
@@ -37,20 +38,38 @@ namespace TestEf.Console
         private static void TestUserInteraction()
         {
             var usersRepo = new UserRepo();
-            var existingUsr = usersRepo.GetByUsernameAsync("userNumber0000").Result;
-            if(existingUsr == null)
+
+            List<User> allUsers;
+            using(var ctx = usersRepo.DbContext())
             {
-                var newUsr = new User
-                {
-                    Username = string.Format("UserNumber{0:0000}", 0),
-                    FirstName = "First",
-                    LastName = "Last",
-                    TenantId = 2
-                };
-                usersRepo.SaveFullEntitiesAsync(new[] {newUsr}).Wait();
+                allUsers = ctx.Users.ToList();
             }
-            System.Console.WriteLine("The new UserNumber0000 was saved properly.");
+            allUsers.ForEach(usr =>
+            {
+                var sb = new StringBuilder();
+                sb.Append(string.Format("{0}_v2", usr.FirstName));
+                usr.FirstName = sb.ToString();
+            });
+
+            usersRepo.SaveFullEntitiesAsync(allUsers.ToArray()).Wait();
+
+            System.Console.WriteLine("Users were updated to v2");
             System.Console.ReadLine();
+
+            //var existingUsr = usersRepo.GetByUsernameAsync("userNumber0000").Result;
+            //if(existingUsr == null)
+            //{
+            //    var newUsr = new User
+            //    {
+            //        Username = string.Format("UserNumber{0:0000}", 0),
+            //        FirstName = "First",
+            //        LastName = "Last",
+            //        TenantId = 2
+            //    };
+            //    usersRepo.SaveFullEntitiesAsync(new[] {newUsr}).Wait();
+            //}
+            //System.Console.WriteLine("The new UserNumber0000 was saved properly.");
+            //System.Console.ReadLine();
         }
 
         private static void InitializeTenants(int numberOfTenants = 5)
@@ -83,15 +102,15 @@ namespace TestEf.Console
             
             // --- First delete existing users --- //
             var usersCount = 0;
-            using(var tempRepo = new UserRepo())
+            using(var tempRepo = new MainDbContext())
             {
-                usersCount = tempRepo.DbSet().Count();
+                usersCount = tempRepo.Users.Count();
             }
             
             // Delete all existing users
             if(usersCount > 0)
             {
-                using(var context = usersRepo.DbContext())
+                using(var context = new MainDbContext())
                 {
                     var phoneNumbersToDelete = context.PhoneNumbers.ToList();
                     var usersList = context.Users.ToList();
@@ -154,7 +173,11 @@ namespace TestEf.Console
                     users.Add(user);
                 }
             });
-            //usersRepo.SaveFullEntitiesAsync(users.ToArray()).Wait();
+            //using(var context = usersRepo.DbContext())
+            //{
+            //    context.Users.AddRange(users);
+            //    context.SaveChanges();
+            //}
             usersRepo.InsertAsync(users.ToArray()).Wait();
             usersRepo.Dispose();
 
