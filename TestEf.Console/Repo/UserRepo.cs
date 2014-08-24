@@ -67,8 +67,10 @@ namespace TestEf.Console.Repo
                 return;
             }
             var users = entities.ToList();
-            await SaveEmailsAsync(users.Where(u => u.Id != 0).SelectMany(u => u.Emails).ToList()).ConfigureAwait(false);
-            await SavePhoneNumbersAsync(users.Where(u => u.Id != 0).SelectMany(u => u.PhoneNumbers).ToList(), entities).ConfigureAwait(false);
+            var emailsToSave = users.Where(u => u.Id != 0).SelectMany(u => u.Emails).Distinct().ToList();
+            await SaveEmailsAsync(emailsToSave).ConfigureAwait(false);
+            var phNmbrs = users.Where(u => u.Id != 0).SelectMany(u => u.PhoneNumbers).Distinct().ToList();
+            await SavePhoneNumbersAsync(phNmbrs, entities).ConfigureAwait(false);
             await UpdateCollectionAsync(users).ConfigureAwait(false);
         }
 
@@ -103,41 +105,46 @@ namespace TestEf.Console.Repo
              *        being handled).
              *     4) On the remaining items, call the SaveSqlEntitiesAsBatchAsync method with the EntityState.Deleted being passed in.
              */
-            List<TUserCollection> itemsToDelete;
-            var userEntityIds = givenItems.Select(item => item.UserId).ToList();
+            var itemsToDelete = new List<TUserCollection>();
+            var userEntityIds = givenItems.Select(item => item.UserId).Distinct().ToList();
+
             using(Context = new MainDbContext())
             {
-                itemsToDelete = await Context.Set<TUserCollection>().Where(uc => userEntityIds.Any(id => id == uc.UserId))
-                                             .ToListAsync()
-                                             .ConfigureAwait(false);
-                itemsToDelete.RemoveAll(item => givenItems.Any(gi => gi.Id == item.Id));
+                var query = from collectionItem in Context.Set<TUserCollection>()
+                            select collectionItem;
+                query = userEntityIds.Aggregate(query, (current, id) => current.Where(item => item.UserId == id));
+                var dbItems = await query.ToListAsync().ConfigureAwait(false);
+                itemsToDelete.AddRange(dbItems);
             }
+            itemsToDelete.RemoveAll(item => givenItems.Any(gi => gi.Id == item.Id));
+            itemsToDelete = itemsToDelete.Distinct().ToList();
             await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
         }
 
         public async Task DeleteRemovedManyToManyCollections<TUserManyToManyCollection>(List<TUserManyToManyCollection> givenItems, List<User> users)
             where TUserManyToManyCollection : class, IBaseEntity, IEquatable<TUserManyToManyCollection>, IUserManyToManyCollection, new()
         {
-            List<TUserManyToManyCollection> itemsToDelete;
+            var itemsToDelete = new List<TUserManyToManyCollection>();
             var userIds = users.Select(usr => usr.Id).ToList();
             var givenIds = givenItems.Select(gi => gi.Id).ToList();
-            using(Context = new MainDbContext())
-            {
-                itemsToDelete = await (from mtmCollection in Context.Set<TUserManyToManyCollection>()
-                                       where (
-                                           (from gId in givenIds
-                                            where gId == mtmCollection.Id
-                                            select gId)
-                                           ).Any()
-                                       select mtmCollection).ToListAsync().ConfigureAwait(false)
-                    ;
 
-                //itemsToDelete = await Context.Set<TUserManyToManyCollection>()
-                //                             .Where(mtmC => mtmC.Users.Contains())
-                //                             .ToListAsync().ConfigureAwait(false);
-                itemsToDelete.RemoveAll(item => givenItems.Any(gi => gi.Id == item.Id));
-            }
-            await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            userIds.ForEach(async uId =>
+            {
+                using(Context = new MainDbContext())
+                {
+                    var dbItems = await (from mtmCollection in Context.Set<TUserManyToManyCollection>()
+                                         where mtmCollection.Users.Any(usr => usr.Id == uId)
+                                         select mtmCollection).ToListAsync().ConfigureAwait(false);
+
+                    //itemsToDelete = await Context.Set<TUserManyToManyCollection>()
+                    //                             .Where(mtmC => mtmC.Users.Contains())
+                    //                             .ToListAsync().ConfigureAwait(false);
+                    dbItems.RemoveAll(dbItem => givenItems.Any(gi => gi.Id == dbItem.Id));
+                    itemsToDelete.AddRange(dbItems);
+                }
+                await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+                itemsToDelete.Clear();
+            });
         }
     }
 

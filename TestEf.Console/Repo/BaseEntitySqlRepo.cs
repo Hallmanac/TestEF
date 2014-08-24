@@ -246,12 +246,18 @@ namespace TestEf.Console.Repo
         public virtual async Task UpdateCollectionAsync<TEntity>(List<TEntity> givenItems)
             where TEntity : class, IBaseEntity, IEquatable<TEntity>, new()
         {
+            // TODO: Limit the processing of the givenItems to a count of 500 max.
+            
             // Get the database versions of the givenItems for comparison. 
             List<TEntity> dbItems;
             var givenIds = givenItems.Select(gi => gi.Id).ToList();
             using(Context = new TContext())
             {
-                dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
+                //dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
+                var query = from ents in Context.Set<TEntity>()
+                            select ents;
+                query = givenIds.Aggregate(query, (current, id) => current.Where(item => item.Id == id));
+                dbItems = await query.ToListAsync().ConfigureAwait(false);
             }
 
             // Loop through the givenItems to see which ones need an update and which ones need an insert
