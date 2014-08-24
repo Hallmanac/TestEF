@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Threading.Tasks;
 using TestEf.Console.Core;
@@ -9,7 +8,7 @@ using TestEf.Console.Core;
 namespace TestEf.Console.Repo
 {
     public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject, TContext> where TModelObject : class, IBaseEntity, new()
-                                                                                                    where TContext : DbContext, new()
+                                                                                                              where TContext : DbContext, new()
     {
         protected TContext Context;
 
@@ -54,7 +53,7 @@ namespace TestEf.Console.Repo
             var context = new TContext();
             return context;
         }
-        
+
         /// <summary>
         /// Returns an IQueryable<typeparam name="TModelObject"></typeparam>. This is more for use with Entity Framework or
         /// providers like it that support IQueryable. Azure Table Storage doesn't currently support IQueryable (as of 2013-08-20) so
@@ -71,7 +70,7 @@ namespace TestEf.Console.Repo
             return Context.Set<TModelObject>();
         }
 
-        public abstract Task<List<TModelObject>> GetByIdsAsync(int[] ids); 
+        public abstract Task<List<TModelObject>> GetByIdsAsync(int[] ids);
 
         /// <summary>
         /// Gets an object by its Guid based ID
@@ -147,7 +146,52 @@ namespace TestEf.Console.Repo
 
             // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
             // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
-            var commitCount = (entities.Length) < 100 ? entities.Length : 100;
+            // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
+            var maxCommitCount = (entities.Length) < 100 ? entities.Length : 100;
+            var commitsRemaining = entities.Length;
+
+            while(commitsRemaining != 0)
+            {
+                using (var ctx = new TContext())
+                {
+                    // Turn off all the fluff of Entity Framework since we are taking responsibility for tracking our own changes.
+                    ctx.Configuration.AutoDetectChangesEnabled = false;
+                    ctx.Configuration.ProxyCreationEnabled = false;
+                    ctx.Configuration.LazyLoadingEnabled = false;
+
+                    // Loop backwards through the given entities array that was passed in to this method and add each one to the DbContext with the 
+                    // EntityState based on what was passed into this method
+                    for (var i = commitsRemaining; i > commitsRemaining - maxCommitCount; i--)
+                    {
+                        ctx.Entry(entities[i - 1]).State = entState;
+                    }
+
+                    // Save changes
+                    await ctx.SaveChangesAsync().ConfigureAwait(false);
+
+                    // We run through the same loop and Detach each of the saved entities from the context
+                    /*
+                     * This technnique was determined through many hours of trial and error testing that determined that when we go through 
+                     * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
+                     * twice which would cause SaveChanges to fail.
+                     */
+                    for (var i = commitsRemaining; i > commitsRemaining - maxCommitCount; i--)
+                    {
+                        ctx.Entry(entities[i - 1]).State = EntityState.Detached;
+                    }
+                    ctx.Dispose();
+                }
+                commitsRemaining = commitsRemaining - maxCommitCount;
+                if(maxCommitCount > commitsRemaining)
+                {
+                    maxCommitCount = commitsRemaining;
+                }
+            }
+
+            #region --- Old way (Commented out) ----
+            // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
+            // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
+            /*var commitCount = (entities.Length) < 100 ? entities.Length : 100;
 
             // List to hold the current batch insert
             var commitList = new List<TEntity>();
@@ -166,27 +210,30 @@ namespace TestEf.Console.Repo
                 }
 
                 // Now that we've reached the max count for the current batch save, we save.
-                using(Context = new TContext())
+                using(var ctx = new TContext())
                 {
                     // We make double sure that AutoDetectChanges is off because that has a pretty significant impact on raw performance
-                    Context.Configuration.AutoDetectChangesEnabled = false;
-                    if(entState == EntityState.Added)
-                    {
-                        Context.Set<TEntity>().AddRange(commitList);
-                    }
-                    else
+                    ctx.Configuration.AutoDetectChangesEnabled = false;
+                    //if(entState == EntityState.Added)
+                    //{
+                    //    Context.Set<TEntity>().AddRange(commitList);
+                    //}
+                    //else
                     {
                         // Iterate through the commitList and change the entity State to "Added" which will attach the entity to the DbContext (Context)
-                        commitList.ForEach(listEntity => Context.Entry(listEntity).State = entState);
+                        commitList.ForEach(listEntity => ctx.Entry(listEntity).State = entState);
                     }
 
                     // Commit to the database.
-                    await Context.SaveChangesAsync().ConfigureAwait(false);
+                    await ctx.SaveChangesAsync().ConfigureAwait(false);
+                    ctx.Dispose();
+                    // We clear out the commitList in the event we have more entities to be saved.
+                    commitList.Clear();
+                    commitList = null;
+                    commitList = new List<TEntity>();
                 }
-
-                // We clear out the commitList in the event we have more entities to be saved.
-                commitList.Clear();
-            }
+            }*/
+            #endregion
         }
 
         /// <summary>
@@ -202,7 +249,7 @@ namespace TestEf.Console.Repo
             // Get the database versions of the givenItems for comparison. 
             List<TEntity> dbItems;
             var givenIds = givenItems.Select(gi => gi.Id).ToList();
-            using (Context = new TContext())
+            using(Context = new TContext())
             {
                 dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
             }
@@ -213,12 +260,11 @@ namespace TestEf.Console.Repo
                            let dbItem = dbItems.FirstOrDefault(di => di.Id == givenItem.Id)
                            where !givenItem.Equals(dbItem)
                            select givenItem).ToList();
-            
-            if (inserts.Count > 0)
+            if(inserts.Count > 0)
             {
                 await SaveSqlEntitiesAsBatchAsync(inserts.ToArray(), EntityState.Added).ConfigureAwait(false);
             }
-            if (updates.Count > 0)
+            if(updates.Count > 0)
             {
                 await SaveSqlEntitiesAsBatchAsync(updates.ToArray(), EntityState.Modified).ConfigureAwait(false);
             }
