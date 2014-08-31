@@ -27,6 +27,7 @@ namespace TestEf.Console
                 var sb = new StringBuilder();
                 sb.Append(string.Format("{0}_v2", usr.FirstName));
                 usr.FirstName = sb.ToString();
+
             });
 
             await usersRepo.SaveFullEntitiesAsync(allUsers.ToArray());
@@ -73,14 +74,12 @@ namespace TestEf.Console
             // Delete all existing users
             if (usersCount > 0)
             {
-                using (var context = new MainDbContext())
-                {
-                    var phoneNumbersToDelete = await  context.PhoneNumbers.ToListAsync().ConfigureAwait(false);
-                    var usersList = await context.Users.ToListAsync().ConfigureAwait(false);
-                    usersList.ForEach(usr => context.Entry(usr).State = EntityState.Deleted);
-                    phoneNumbersToDelete.ForEach(ph => context.Entry(ph).State = EntityState.Deleted);
-                    await context.SaveChangesAsync().ConfigureAwait(false);
-                }
+                // Getting all user Ids as a way to test the GetByIdsAsync method
+                var allUserIds = await usersRepo.GetAllUserIds().ConfigureAwait(false);
+
+                // Getting all users by their Ids
+                var existingUsers = await usersRepo.GetByIdsAsync(allUserIds.ToArray()).ConfigureAwait(false);
+                await usersRepo.DeleteAsync(existingUsers.ToArray()).ConfigureAwait(false);
             }
 
             // --- Next create the users --- //

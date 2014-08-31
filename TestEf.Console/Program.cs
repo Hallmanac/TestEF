@@ -16,17 +16,6 @@ namespace TestEf.Console
             mainMigrator.Update();
 
             AsyncContext.Run(() => MainAsync(args));
-
-            //DoSomething();
-
-            //using(var context = new MainDbContext())
-            //{
-            //    retrievedUser.PhoneNumbers.Clear();
-            //    retrievedUser.Emails.ToList().ForEach(eml => context.Entry(eml).State = EntityState.Deleted);
-            //    retrievedUser.Emails.Clear();
-            //    context.Entry(retrievedUser).State = EntityState.Deleted;
-            //    context.SaveChanges();
-            //}
         }
 
         private static async Task MainAsync(string[] args)
