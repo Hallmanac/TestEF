@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using TestEf.Console.Core;
+using TestEf.Console.Core.ExtensionMethods;
 using TestEf.Console.Identity;
 
 namespace TestEf.Console.Repo
@@ -14,11 +16,16 @@ namespace TestEf.Console.Repo
         {
             using(Context = new MainDbContext())
             {
-                return await Context.Users
-                                    .Include(usr => usr.Emails)
-                                    .Include(usr => usr.PhoneNumbers)
-                                    .Where(usr => ids.Any(id => id == usr.Id))
-                                    .ToListAsync().ConfigureAwait(false);
+                /*
+                 * The "Any()" call does not work with Entity Framework 6.1.1 due to the query optimizer throwing an exception since it recognizes that
+                 * the SQL that it will generate has poor performance
+                */
+                var users = await Context.Users.Include(usr => usr.Emails)
+                                         .Include(usr => usr.PhoneNumbers)
+                                         .Where(usr => ids.Contains(usr.Id)) // --- Contains() is all that works for this kind of query!!!!
+                                         .ToListAsync()
+                                         .ConfigureAwait(false);
+                return users;
             }
         }
 
@@ -45,7 +52,7 @@ namespace TestEf.Console.Repo
                 return await Context.Users
                                     .Include(usr => usr.PhoneNumbers)
                                     .Include(usr => usr.Emails)
-                                    .Where(usr => userNames.Any(un => un == usr.Username))
+                                    .Where(usr => userNames.Contains(usr.Username)) // --- Only use Contains() not Any()
                                     .ToListAsync().ConfigureAwait(false);
             }
         }
@@ -76,14 +83,17 @@ namespace TestEf.Console.Repo
 
         public async Task SavePhoneNumbersAsync(List<PhoneNumber> givenItems, User[] givenUsers)
         {
-            var userIds = givenUsers.Select(usr => usr.Id).ToList();
             await DeleteRemovedManyToManyCollections(givenItems, givenUsers.ToList()).ConfigureAwait(false);
             await UpdateCollectionAsync(givenItems).ConfigureAwait(false);
         }
 
         public async Task SaveEmailsAsync(List<Email> givenItems)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             await DeleteRemovedUserCollectionsAsync(givenItems).ConfigureAwait(false);
+            sw.Stop();
+            System.Console.WriteLine("\nElapsed time for Delete Removed Emails was {0}", sw.ElapsedMilliseconds);
             await UpdateCollectionAsync(givenItems).ConfigureAwait(false);
         }
 
@@ -91,7 +101,32 @@ namespace TestEf.Console.Repo
         /// Deletes each of the objects in the given array
         /// </summary>
         /// <param name="entities"></param>
-        public override Task DeleteAsync(User[] entities) { return null; }
+        public override async Task DeleteAsync(User[] entities)
+        {
+            if(entities == null || entities.Length < 1)
+            {
+                return;
+            }
+            /*
+             * Need to delete the property collections from the database and then clear those lists out before deleting the UserEntity, otherwise you'll get a 
+             * foreign key exception because EF will see that there are other collections that are attached to the UserEntity, do another insert of those 
+             * collection items prior to deleting the user, and then throw a foreign key exception.
+            */
+
+            // Create a usersList to reuse against Linq-to-objects
+            var usersList = entities.ToList();
+
+            // Delete the Emails from the Database
+            await SaveSqlEntitiesAsBatchAsync(usersList.Where(usr => usr.Id != 0)
+                                                       .SelectMany(usr => usr.Emails).Distinct().ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            usersList.ForEach(usr => usr.Emails.Clear());
+
+            // Delete the PhoneNumbers from the Database
+            var phsToDelete = usersList.Where(user => user.Id != 0).SelectMany(usr => usr.PhoneNumbers).Distinct().ToList();
+            await SaveSqlEntitiesAsBatchAsync(phsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            usersList.ForEach(usr => usr.PhoneNumbers.Clear());
+            await SaveSqlEntitiesAsBatchAsync(usersList.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+        }
 
         public async Task DeleteRemovedUserCollectionsAsync<TUserCollection>(List<TUserCollection> givenItems)
             where TUserCollection : class, IBaseEntity, IEquatable<TUserCollection>, IUserCollection, new()
@@ -100,25 +135,32 @@ namespace TestEf.Console.Repo
              * We need to:
              *     1) From the database, get all "Collection Items" that have the UserId of any of the givenItems 
              *        (hence the IUserCollection interface to guarantee the existence of a UserId property)
-             *     2) Of the database items that come back remove remove any items that are equal to any of the givenItems
+             *     2) Of the database items that come back, remove any items that are equal to any of the givenItems (i.e. remove items from the "to be deleted" 
+             *          list that still exist and aren't being deleted)
              *     3) The database items that are remaining are what was deleted while processing logic was being run (a.k.a. a web request was
              *        being handled).
              *     4) On the remaining items, call the SaveSqlEntitiesAsBatchAsync method with the EntityState.Deleted being passed in.
-             */
-            var itemsToDelete = new List<TUserCollection>();
-            var userEntityIds = givenItems.Select(item => item.UserId).Distinct().ToList();
+            */
 
-            using(Context = new MainDbContext())
+            // Batch the given items into groups of no more than 500
+            var batchedItems = givenItems.ToBatch(500);
+            foreach(var givenBatch in batchedItems)
             {
-                var query = from collectionItem in Context.Set<TUserCollection>()
-                            select collectionItem;
-                query = userEntityIds.Aggregate(query, (current, id) => current.Where(item => item.UserId == id));
-                var dbItems = await query.ToListAsync().ConfigureAwait(false);
-                itemsToDelete.AddRange(dbItems);
+
+                var itemsToDelete = new List<TUserCollection>();
+                var userEntityIds = givenBatch.Select(item => item.UserId).Distinct().ToList();
+                using (Context = new MainDbContext())
+                {
+                    var query = from collectionItem in Context.Set<TUserCollection>()
+                                where userEntityIds.Contains(collectionItem.UserId)
+                                select collectionItem;
+                    var dbItems = await query.ToListAsync().ConfigureAwait(false);
+                    itemsToDelete.AddRange(dbItems);
+                }
+                itemsToDelete.RemoveAll(item => givenBatch.Any(gi => gi.Id == item.Id));
+                itemsToDelete = itemsToDelete.Distinct().ToList();
+                await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
             }
-            itemsToDelete.RemoveAll(item => givenItems.Any(gi => gi.Id == item.Id));
-            itemsToDelete = itemsToDelete.Distinct().ToList();
-            await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
         }
 
         public async Task DeleteRemovedManyToManyCollections<TUserManyToManyCollection>(List<TUserManyToManyCollection> givenItems, List<User> users)
@@ -126,25 +168,56 @@ namespace TestEf.Console.Repo
         {
             var itemsToDelete = new List<TUserManyToManyCollection>();
             var userIds = users.Select(usr => usr.Id).ToList();
-            var givenIds = givenItems.Select(gi => gi.Id).ToList();
-
-            userIds.ForEach(async uId =>
+            
+            var sw = new Stopwatch();
+            sw.Start();
+            using(Context = new MainDbContext())
             {
-                using(Context = new MainDbContext())
-                {
-                    var dbItems = await (from mtmCollection in Context.Set<TUserManyToManyCollection>()
-                                         where mtmCollection.Users.Any(usr => usr.Id == uId)
-                                         select mtmCollection).ToListAsync().ConfigureAwait(false);
+                var query = (from mtmColl in Context.Set<TUserManyToManyCollection>()
+                            where ((from user in Context.Users
+                                    from phUser in mtmColl.Users
+                                    where userIds.Contains(user.Id) && phUser.Id == user.Id
+                                    select user).Any())
+                            select mtmColl).Distinct();
+                var dbList = await query.ToListAsync().ConfigureAwait(false);
+                dbList.RemoveAll(dbItem => givenItems.Any(gi => gi.Id == dbItem.Id));
+                itemsToDelete.AddRange(dbList);
+            }
+            await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            sw.Stop();
+            System.Console.WriteLine("\nElapsed update time in milliseconds was {0}", sw.ElapsedMilliseconds);
 
-                    //itemsToDelete = await Context.Set<TUserManyToManyCollection>()
-                    //                             .Where(mtmC => mtmC.Users.Contains())
-                    //                             .ToListAsync().ConfigureAwait(false);
-                    dbItems.RemoveAll(dbItem => givenItems.Any(gi => gi.Id == dbItem.Id));
-                    itemsToDelete.AddRange(dbItems);
-                }
-                await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
-                itemsToDelete.Clear();
-            });
+            #region --- Old way (commented out) ---
+            //var sw = new Stopwatch();
+            //sw.Start();
+            //foreach(var uId in userIds)
+            //{
+            //    using (Context = new MainDbContext())
+            //    {
+            //        var dbItems = await (from mtmCollection in Context.Set<TUserManyToManyCollection>()
+            //                             where mtmCollection.Users.Any(usr => usr.Id == uId)
+            //                             select mtmCollection).ToListAsync().ConfigureAwait(false);
+            //
+            //        //itemsToDelete = await Context.Set<TUserManyToManyCollection>()
+            //        //                             .Where(mtmC => mtmC.Users.Contains())
+            //        //                             .ToListAsync().ConfigureAwait(false);
+            //        dbItems.RemoveAll(dbItem => givenItems.Any(gi => gi.Id == dbItem.Id));
+            //        itemsToDelete.AddRange(dbItems);
+            //    }
+            //    await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            //    itemsToDelete.Clear();
+            //}
+            //sw.Stop();
+            //System.Console.WriteLine("\nElapsed update time in milliseconds was {0}", sw.ElapsedMilliseconds);
+            #endregion
+        }
+
+        public async Task<List<int>> GetAllUserIds()
+        {
+            using(Context = new MainDbContext())
+            {
+                return await Context.Users.Select(usr => usr.Id).ToListAsync().ConfigureAwait(false);
+            }
         }
     }
 
