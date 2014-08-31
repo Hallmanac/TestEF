@@ -62,6 +62,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\ExtensionMethods\ListExtensions.cs" />
     <Compile Include="Migrations\201408231718584_v00_00_01_001.cs" />
     <Compile Include="Migrations\201408231718584_v00_00_01_001.Designer.cs">
       <DependentUpon>201408231718584_v00_00_01_001.cs</DependentUpon>
