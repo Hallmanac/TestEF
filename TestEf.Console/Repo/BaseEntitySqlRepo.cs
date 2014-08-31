@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using TestEf.Console.Core;
+using TestEf.Console.Core.ExtensionMethods;
 
 namespace TestEf.Console.Repo
 {
@@ -246,33 +247,37 @@ namespace TestEf.Console.Repo
         public virtual async Task UpdateCollectionAsync<TEntity>(List<TEntity> givenItems)
             where TEntity : class, IBaseEntity, IEquatable<TEntity>, new()
         {
-            // TODO: Limit the processing of the givenItems to a count of 500 max.
-            
-            // Get the database versions of the givenItems for comparison. 
-            List<TEntity> dbItems;
-            var givenIds = givenItems.Select(gi => gi.Id).ToList();
-            using(Context = new TContext())
-            {
-                //dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
-                var query = from ents in Context.Set<TEntity>()
-                            select ents;
-                query = givenIds.Aggregate(query, (current, id) => current.Where(item => item.Id == id));
-                dbItems = await query.ToListAsync().ConfigureAwait(false);
-            }
+            // Limit the processing of the givenItems to a count of 500 max.
+            var batchedItems = givenItems.ToBatch(500);
 
-            // Loop through the givenItems to see which ones need an update and which ones need an insert
-            var inserts = givenItems.Where(gi => gi.Id == 0).ToList();
-            var updates = (from givenItem in givenItems
-                           let dbItem = dbItems.FirstOrDefault(di => di.Id == givenItem.Id)
-                           where !givenItem.Equals(dbItem)
-                           select givenItem).ToList();
-            if(inserts.Count > 0)
+            foreach(var givenBatch in batchedItems)
             {
-                await SaveSqlEntitiesAsBatchAsync(inserts.ToArray(), EntityState.Added).ConfigureAwait(false);
-            }
-            if(updates.Count > 0)
-            {
-                await SaveSqlEntitiesAsBatchAsync(updates.ToArray(), EntityState.Modified).ConfigureAwait(false);
+                // Get the database versions of the givenItems for comparison. 
+                List<TEntity> dbItems;
+                var givenIds = givenBatch.Select(gi => gi.Id).ToList();
+                using (Context = new TContext())
+                {
+                    //dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
+                    var query = from ents in Context.Set<TEntity>()
+                                select ents;
+                    query = givenIds.Aggregate(query, (current, id) => current.Where(item => item.Id == id));
+                    dbItems = await query.ToListAsync().ConfigureAwait(false);
+                }
+
+                // Loop through the givenItems to see which ones need an update and which ones need an insert
+                var inserts = givenBatch.Where(gi => gi.Id == 0).ToList();
+                var updates = (from givenItem in givenBatch
+                               let dbItem = dbItems.FirstOrDefault(di => di.Id == givenItem.Id)
+                               where !givenItem.Equals(dbItem)
+                               select givenItem).ToList();
+                if (inserts.Count > 0)
+                {
+                    await SaveSqlEntitiesAsBatchAsync(inserts.ToArray(), EntityState.Added).ConfigureAwait(false);
+                }
+                if (updates.Count > 0)
+                {
+                    await SaveSqlEntitiesAsBatchAsync(updates.ToArray(), EntityState.Modified).ConfigureAwait(false);
+                }
             }
         }
 
