@@ -148,7 +148,37 @@ namespace TestEf.Console.Repo
             // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
             // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
             // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
-            var maxCommitCount = (entities.Length) < 100 ? entities.Length : 100;
+            var batchedEntities = entities.ToList().ToBatch(100);
+
+            foreach(var batchEntityList in batchedEntities)
+            {
+                using(Context = new TContext())
+                {
+                    // Turn off all the fluff of Entity Framework since we are taking responsibility for tracking our own changes.
+                    Context.Configuration.AutoDetectChangesEnabled = false;
+                    Context.Configuration.ProxyCreationEnabled = false;
+                    Context.Configuration.LazyLoadingEnabled = false;
+
+                    // Attach each entity to the Context and Save
+                    batchEntityList.ForEach(ent => Context.Entry(ent).State = entState);
+                    await Context.SaveChangesAsync().ConfigureAwait(false);
+
+                    // Run through the same loop and Detach each of the saved entities from the context
+                    /*
+                     * This technnique was determined through many hours of trial and error testing that determined that when we go through 
+                     * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
+                     * twice which would cause SaveChanges to fail.
+                    */
+                    batchEntityList.ForEach(ent => Context.Entry(ent).State = EntityState.Detached);
+                    Context.Dispose();
+                }
+            }
+
+            #region ---- Manual version of what's above (commented out) ----
+            // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
+            // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
+            // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
+            /*var maxCommitCount = (entities.Length) < 100 ? entities.Length : 100;
             var commitsRemaining = entities.Length;
 
             while(commitsRemaining != 0)
@@ -175,7 +205,7 @@ namespace TestEf.Console.Repo
                      * This technnique was determined through many hours of trial and error testing that determined that when we go through 
                      * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
                      * twice which would cause SaveChanges to fail.
-                     */
+                     #1#
                     for (var i = commitsRemaining; i > commitsRemaining - maxCommitCount; i--)
                     {
                         ctx.Entry(entities[i - 1]).State = EntityState.Detached;
@@ -187,7 +217,8 @@ namespace TestEf.Console.Repo
                 {
                     maxCommitCount = commitsRemaining;
                 }
-            }
+            }*/
+            #endregion
 
             #region --- Old way (Commented out) ----
             // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
