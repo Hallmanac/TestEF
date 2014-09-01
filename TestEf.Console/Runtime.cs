@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -135,7 +136,12 @@ namespace TestEf.Console
                     users.Add(user);
                 }
             });
+
+            var sw = new Stopwatch();
+            sw.Start();
             await usersRepo.InsertAsync(users.ToArray()).ConfigureAwait(false);
+            sw.Stop();
+            System.Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
             usersRepo.Dispose();
 
         }
