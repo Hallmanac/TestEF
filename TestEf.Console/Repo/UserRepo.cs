@@ -67,21 +67,21 @@ namespace TestEf.Console.Repo
         /// Saves a set of objects, including its child collection, as an insert, update, or delete operation depending on what has changed from in the database.
         /// </summary>
         /// <param name="entities"></param>
-        public override async Task SaveFullEntitiesAsync(User[] entities)
+        public override async Task SaveFullEntitiesAsync(List<User> entities)
         {
-            if(entities == null || entities.Length < 1)
+            if(entities == null || entities.Count < 1)
             {
                 return;
             }
-            var users = entities.ToList();
-            var emailsToSave = users.Where(u => u.Id != 0).SelectMany(u => u.Emails).Distinct().ToList();
+            //var users = entities.ToList();
+            var emailsToSave = entities.Where(u => u.Id != 0).SelectMany(u => u.Emails).Distinct().ToList();
             await SaveEmailsAsync(emailsToSave).ConfigureAwait(false);
-            var phNmbrs = users.Where(u => u.Id != 0).SelectMany(u => u.PhoneNumbers).Distinct().ToList();
+            var phNmbrs = entities.Where(u => u.Id != 0).SelectMany(u => u.PhoneNumbers).Distinct().ToList();
             await SavePhoneNumbersAsync(phNmbrs, entities).ConfigureAwait(false);
-            await UpdateCollectionAsync(users).ConfigureAwait(false);
+            await UpdateCollectionAsync(entities).ConfigureAwait(false);
         }
 
-        public async Task SavePhoneNumbersAsync(List<PhoneNumber> givenItems, User[] givenUsers)
+        public async Task SavePhoneNumbersAsync(List<PhoneNumber> givenItems, List<User> givenUsers)
         {
             await DeleteRemovedManyToManyCollections(givenItems, givenUsers.ToList()).ConfigureAwait(false);
             await UpdateCollectionAsync(givenItems).ConfigureAwait(false);
@@ -101,9 +101,9 @@ namespace TestEf.Console.Repo
         /// Deletes each of the objects in the given array
         /// </summary>
         /// <param name="entities"></param>
-        public override async Task DeleteAsync(User[] entities)
+        public override async Task DeleteAsync(List<User> entities)
         {
-            if(entities == null || entities.Length < 1)
+            if(entities == null || entities.Count < 1)
             {
                 return;
             }
@@ -113,19 +113,16 @@ namespace TestEf.Console.Repo
              * collection items prior to deleting the user, and then throw a foreign key exception.
             */
 
-            // Create a usersList to reuse against Linq-to-objects
-            var usersList = entities.ToList();
-
             // Delete the Emails from the Database
-            await SaveSqlEntitiesAsBatchAsync(usersList.Where(usr => usr.Id != 0)
-                                                       .SelectMany(usr => usr.Emails).Distinct().ToArray(), EntityState.Deleted).ConfigureAwait(false);
-            usersList.ForEach(usr => usr.Emails.Clear());
+            await SaveSqlEntitiesAsBatchAsync(entities.Where(usr => usr.Id != 0)
+                                                       .SelectMany(usr => usr.Emails).Distinct().ToList(), EntityState.Deleted).ConfigureAwait(false);
+            entities.ForEach(usr => usr.Emails.Clear());
 
             // Delete the PhoneNumbers from the Database
-            var phsToDelete = usersList.Where(user => user.Id != 0).SelectMany(usr => usr.PhoneNumbers).Distinct().ToList();
-            await SaveSqlEntitiesAsBatchAsync(phsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
-            usersList.ForEach(usr => usr.PhoneNumbers.Clear());
-            await SaveSqlEntitiesAsBatchAsync(usersList.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            var phsToDelete = entities.Where(user => user.Id != 0).SelectMany(usr => usr.PhoneNumbers).Distinct().ToList();
+            await SaveSqlEntitiesAsBatchAsync(phsToDelete.ToList(), EntityState.Deleted).ConfigureAwait(false);
+            entities.ForEach(usr => usr.PhoneNumbers.Clear());
+            await SaveSqlEntitiesAsBatchAsync(entities, EntityState.Deleted).ConfigureAwait(false);
         }
 
         public async Task DeleteRemovedUserCollectionsAsync<TUserCollection>(List<TUserCollection> givenItems)
@@ -159,7 +156,7 @@ namespace TestEf.Console.Repo
                 }
                 itemsToDelete.RemoveAll(item => givenBatch.Any(gi => gi.Id == item.Id));
                 itemsToDelete = itemsToDelete.Distinct().ToList();
-                await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+                await SaveSqlEntitiesAsBatchAsync(itemsToDelete, EntityState.Deleted).ConfigureAwait(false);
             }
         }
 
@@ -183,7 +180,7 @@ namespace TestEf.Console.Repo
                 dbList.RemoveAll(dbItem => givenItems.Any(gi => gi.Id == dbItem.Id));
                 itemsToDelete.AddRange(dbList);
             }
-            await SaveSqlEntitiesAsBatchAsync(itemsToDelete.ToArray(), EntityState.Deleted).ConfigureAwait(false);
+            await SaveSqlEntitiesAsBatchAsync(itemsToDelete, EntityState.Deleted).ConfigureAwait(false);
             sw.Stop();
             System.Console.WriteLine("\nElapsed update time in milliseconds was {0}", sw.ElapsedMilliseconds);
 

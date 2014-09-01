@@ -31,7 +31,7 @@ namespace TestEf.Console
 
             });
 
-            await usersRepo.SaveFullEntitiesAsync(allUsers.ToArray());
+            await usersRepo.SaveFullEntitiesAsync(allUsers);
 
             System.Console.WriteLine("Users were updated to v2");
             System.Console.ReadLine();
@@ -80,7 +80,7 @@ namespace TestEf.Console
 
                 // Getting all users by their Ids
                 var existingUsers = await usersRepo.GetByIdsAsync(allUserIds.ToArray()).ConfigureAwait(false);
-                await usersRepo.DeleteAsync(existingUsers.ToArray()).ConfigureAwait(false);
+                await usersRepo.DeleteAsync(existingUsers).ConfigureAwait(false);
             }
 
             // --- Next create the users --- //
@@ -139,7 +139,7 @@ namespace TestEf.Console
 
             var sw = new Stopwatch();
             sw.Start();
-            await usersRepo.InsertAsync(users.ToArray()).ConfigureAwait(false);
+            await usersRepo.InsertAsync(users).ConfigureAwait(false);
             sw.Stop();
             System.Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
             usersRepo.Dispose();

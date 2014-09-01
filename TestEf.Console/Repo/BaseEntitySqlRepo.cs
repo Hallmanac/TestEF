@@ -84,7 +84,7 @@ namespace TestEf.Console.Repo
         /// Saves a set of objects (along with all their child collection tables) as an insert operation.
         /// </summary>
         /// <param name="entities"></param>
-        public async Task InsertAsync(TModelObject[] entities)
+        public async Task InsertAsync(List<TModelObject> entities)
         {
             // When inserting, Entity Framework automatically inserts any new child collections or child objects as well
             // so there's no need to call "SaveAllChildCollections"
@@ -92,7 +92,7 @@ namespace TestEf.Console.Repo
             {
                 throw new ArgumentNullException("entities");
             }
-            if(entities.Length < 1)
+            if(entities.Count < 1)
             {
                 return;
             }
@@ -103,19 +103,19 @@ namespace TestEf.Console.Repo
         /// Saves a set of objects, including its child collection, as an insert, update, or delete operation depending on what has changed from in the database.
         /// </summary>
         /// <param name="entities"></param>
-        public abstract Task SaveFullEntitiesAsync(TModelObject[] entities);
+        public abstract Task SaveFullEntitiesAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves an entity to it's associated table only, excluding any collections or related tables.
         /// </summary>
         /// <param name="entities"></param>
-        public async Task UpdateBasicEntitiesAsync(TModelObject[] entities)
+        public async Task UpdateBasicEntitiesAsync(List<TModelObject> entities)
         {
             if(entities == null)
             {
                 throw new ArgumentNullException("entities");
             }
-            if(entities.Length < 1)
+            if(entities.Count < 1)
             {
                 return;
             }
@@ -125,8 +125,7 @@ namespace TestEf.Console.Repo
         /// <summary>
         /// Deletes each of the objects in the given array
         /// </summary>
-        /// <param name="entities"></param>
-        public abstract Task DeleteAsync(TModelObject[] entities);
+        public abstract Task DeleteAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves an array of entities as a batch Insert, Update, or Delete based on the given EntityState.
@@ -134,13 +133,13 @@ namespace TestEf.Console.Repo
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="entities">Array of entities to save as batch to the database</param>
         /// <param name="entState">EntityState.Added, EntityState.Modified, EntityState.Deleted, etc.</param>
-        public virtual async Task SaveSqlEntitiesAsBatchAsync<TEntity>(TEntity[] entities, EntityState entState) where TEntity : class, IBaseEntity, new()
+        public virtual async Task SaveSqlEntitiesAsBatchAsync<TEntity>(List<TEntity> entities, EntityState entState) where TEntity : class, new()
         {
             if(entities == null)
             {
                 throw new ArgumentNullException("entities");
             }
-            if(entities.Length < 1)
+            if(entities.Count < 1)
             {
                 return;
             }
@@ -148,7 +147,7 @@ namespace TestEf.Console.Repo
             // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
             // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
             // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
-            var batchedEntities = entities.ToList().ToBatch(100);
+            var batchedEntities = entities.ToBatch(100);
 
             foreach(var batchEntityList in batchedEntities)
             {
@@ -303,11 +302,11 @@ namespace TestEf.Console.Repo
                                select givenItem).ToList();
                 if (inserts.Count > 0)
                 {
-                    await SaveSqlEntitiesAsBatchAsync(inserts.ToArray(), EntityState.Added).ConfigureAwait(false);
+                    await SaveSqlEntitiesAsBatchAsync(inserts, EntityState.Added).ConfigureAwait(false);
                 }
                 if (updates.Count > 0)
                 {
-                    await SaveSqlEntitiesAsBatchAsync(updates.ToArray(), EntityState.Modified).ConfigureAwait(false);
+                    await SaveSqlEntitiesAsBatchAsync(updates, EntityState.Modified).ConfigureAwait(false);
                 }
             }
         }

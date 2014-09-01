@@ -32,26 +32,22 @@ namespace TestEf.Console.Repo
         /// <summary>
         /// Saves a set of objects as an insert operation.
         /// </summary>
-        /// <param name="entities"></param>
-        Task InsertAsync(TModelObject[] entities);
+        Task InsertAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves a set of objects, including its child collection, as an insert, update, or delete operation depending on what has changed from in the database.
         /// </summary>
-        /// <param name="entities"></param>
-        Task SaveFullEntitiesAsync(TModelObject[] entities);
+        Task SaveFullEntitiesAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves an entity to it's associated table only, excluding any collections or related tables.
         /// </summary>
-        /// <param name="entities"></param>
-        Task UpdateBasicEntitiesAsync(TModelObject[] entities);
+        Task UpdateBasicEntitiesAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Deletes each of the objects in the given array
         /// </summary>
-        /// <param name="entities"></param>
-        Task DeleteAsync(TModelObject[] entities);
+        Task DeleteAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves any collection by getting current database values for 
@@ -67,9 +63,6 @@ namespace TestEf.Console.Repo
         /// <summary>
         /// Saves an array of entities as a batch Insert, Update, or Delete based on the given EntityState.
         /// </summary>
-        /// <typeparam name="TEntity"></typeparam>
-        /// <param name="entities">Array of entities to save as batch to the database</param>
-        /// <param name="entState">EntityState.Added, EntityState.Modified, EntityState.Deleted, etc.</param>
-        Task SaveSqlEntitiesAsBatchAsync<TEntity>(TEntity[] entities, EntityState state) where TEntity : class, IBaseEntity, new();
+        Task SaveSqlEntitiesAsBatchAsync<TEntity>(List<TEntity> entities, EntityState state) where TEntity : class, new();
     }
 }
