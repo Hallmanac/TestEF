@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using TestEf.Console.Core;
@@ -287,11 +288,14 @@ namespace TestEf.Console.Repo
                 var givenIds = givenBatch.Select(gi => gi.Id).ToList();
                 using (Context = new TContext())
                 {
-                    //dbItems = await Context.Set<TEntity>().Where(dbItem => givenIds.Any(givenId => givenId == dbItem.Id)).ToListAsync().ConfigureAwait(false);
-                    var query = from ents in Context.Set<TEntity>()
-                                select ents;
-                    query = givenIds.Aggregate(query, (current, id) => current.Where(item => item.Id == id));
+                    var query = from entity in Context.Set<TEntity>()
+                                where givenIds.Contains(entity.Id)
+                                select entity;
+                    var sw = new Stopwatch();
+                    sw.Start();
                     dbItems = await query.ToListAsync().ConfigureAwait(false);
+                    sw.Stop();
+                    System.Console.WriteLine("\nTime to run the initial update query was {0} milliseconds", sw.ElapsedMilliseconds);
                 }
 
                 // Loop through the givenItems to see which ones need an update and which ones need an insert
