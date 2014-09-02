@@ -159,17 +159,29 @@ namespace TestEf.Console.Repo
                     Context.Configuration.ProxyCreationEnabled = false;
                     Context.Configuration.LazyLoadingEnabled = false;
 
-                    // Attach each entity to the Context and Save
-                    batchEntityList.ForEach(ent => Context.Entry(ent).State = entState);
-                    await Context.SaveChangesAsync().ConfigureAwait(false);
+                    if(entState == EntityState.Added)
+                    {
+                        Context.Set<TEntity>().AddRange(batchEntityList);
+                        await Context.SaveChangesAsync().ConfigureAwait(false);
 
-                    // Run through the same loop and Detach each of the saved entities from the context
-                    /*
-                     * This technnique was determined through many hours of trial and error testing that determined that when we go through 
-                     * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
-                     * twice which would cause SaveChanges to fail.
-                    */
-                    batchEntityList.ForEach(ent => Context.Entry(ent).State = EntityState.Detached);
+                        // Run through the same loop and Detach each of the saved entities from the context
+                        /*
+                         * This technnique was determined through many hours of trial and error testing that determined that when we go through 
+                         * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
+                         * twice which would cause SaveChanges to fail.
+                         * 
+                         * Calling Detached means that all navigation properties and lists will be cancelled out and you will
+                         * be left with just a raw object. You will need to get a fresh instance from the database after
+                         * the insert in order to guarantee a full object.
+                        */
+                        batchEntityList.ForEach(ent => Context.Entry(ent).State = EntityState.Detached);
+                    }
+                    else
+                    {
+                        // Attach each entity to the Context and Save
+                        batchEntityList.ForEach(ent => Context.Entry(ent).State = entState);
+                        await Context.SaveChangesAsync().ConfigureAwait(false);
+                    }
                     Context.Dispose();
                 }
             }
