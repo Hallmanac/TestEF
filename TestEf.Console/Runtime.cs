@@ -143,13 +143,15 @@ namespace TestEf.Console
             sw.Stop();
             System.Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
 
-            sw.Restart();
-            var returnedIds = users.Select(usr => usr.Id).ToList();
-            var newUsers = await usersRepo.GetByIdsAsync(returnedIds.ToArray()).ConfigureAwait(false);
-            sw.Stop();
-            
-            System.Console.WriteLine("\nThe phone number of the first new user is {0}", newUsers.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
-            System.Console.WriteLine("The time taken to retrieve the new users was {0} milliseconds", sw.ElapsedMilliseconds);
+            //sw.Restart();
+            //var returnedIds = users.Select(usr => usr.Id).ToList();
+            //var newUsers = await usersRepo.GetByIdsAsync(returnedIds.ToArray()).ConfigureAwait(false);
+            //sw.Stop();
+            //
+            //System.Console.WriteLine("\nThe phone number of the first new user is {0}", newUsers.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
+            //System.Console.WriteLine("The time taken to retrieve the new users was {0} milliseconds", sw.ElapsedMilliseconds);
+
+            System.Console.WriteLine("The 1st phone number of the 1st user is {0}", users.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
 
             usersRepo.Dispose();
 

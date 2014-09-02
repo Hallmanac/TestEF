@@ -85,20 +85,7 @@ namespace TestEf.Console.Repo
         /// Saves a set of objects (along with all their child collection tables) as an insert operation.
         /// </summary>
         /// <param name="entities"></param>
-        public async Task InsertAsync(List<TModelObject> entities)
-        {
-            // When inserting, Entity Framework automatically inserts any new child collections or child objects as well
-            // so there's no need to call "SaveAllChildCollections"
-            if(entities == null)
-            {
-                throw new ArgumentNullException("entities");
-            }
-            if(entities.Count < 1)
-            {
-                return;
-            }
-            await SaveSqlEntitiesAsBatchAsync(entities, EntityState.Added).ConfigureAwait(false);
-        }
+        public abstract Task InsertAsync(List<TModelObject> entities);
 
         /// <summary>
         /// Saves a set of objects, including its child collection, as an insert, update, or delete operation depending on what has changed from in the database.
