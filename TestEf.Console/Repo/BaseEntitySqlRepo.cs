@@ -4,13 +4,15 @@ using System.Data.Entity;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using TestEf.ConsoleMain.Core;
 using TestEf.ConsoleMain.Core.ExtensionMethods;
 
 namespace TestEf.ConsoleMain.Repo
 {
-    public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject, TContext> where TModelObject : class, IBaseEntity, new()
-                                                                                                              where TContext : DbContext, new()
+    public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject, TContext>
+        where TModelObject : class, IBaseEntity, new()
+        where TContext : DbContext, new()
     {
         protected TContext Context;
 
@@ -34,13 +36,9 @@ namespace TestEf.ConsoleMain.Repo
         protected virtual void Dispose(bool disposing)
         {
             if(_disposed)
-            {
                 return;
-            }
             if(!disposing)
-            {
                 return;
-            }
             if(Context != null)
             {
                 Context.Dispose();
@@ -54,22 +52,6 @@ namespace TestEf.ConsoleMain.Repo
         {
             var context = new TContext();
             return context;
-        }
-
-        /// <summary>
-        /// Returns an IQueryable<typeparam name="TModelObject"></typeparam>. This is more for use with Entity Framework or
-        /// providers like it that support IQueryable. Azure Table Storage doesn't currently support IQueryable (as of 2013-08-20) so
-        /// the implementations of this might return the same thing as the GetEnumerable() method until such time that the IQueryable support 
-        /// for Azure Table Storage is fully implemented.
-        /// </summary>
-        /// <returns></returns>
-        public DbSet<TModelObject> DbSet()
-        {
-            Context = new TContext();
-            Context.Configuration.AutoDetectChangesEnabled = true;
-            Context.Configuration.LazyLoadingEnabled = true;
-            Context.Configuration.ProxyCreationEnabled = true;
-            return Context.Set<TModelObject>();
         }
 
         public abstract Task<List<TModelObject>> GetByIdsAsync(int[] ids);
@@ -100,14 +82,14 @@ namespace TestEf.ConsoleMain.Repo
         public async Task UpdateBasicEntitiesAsync(List<TModelObject> entities)
         {
             if(entities == null)
-            {
                 throw new ArgumentNullException("entities");
-            }
             if(entities.Count < 1)
-            {
                 return;
+            using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                await SaveSqlEntitiesAsBatchAsync(entities, EntityState.Modified).ConfigureAwait(false);
+                scope.Complete();
             }
-            await SaveSqlEntitiesAsBatchAsync(entities, EntityState.Modified).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -124,35 +106,30 @@ namespace TestEf.ConsoleMain.Repo
         public virtual async Task SaveSqlEntitiesAsBatchAsync<TEntity>(List<TEntity> entities, EntityState entState) where TEntity : class, new()
         {
             if(entities == null)
-            {
                 throw new ArgumentNullException("entities");
-            }
             if(entities.Count < 1)
-            {
                 return;
-            }
 
-            // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
-            // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
-            // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
-            var batchedEntities = entities.ToBatch(100);
-
-            foreach(var batchEntityList in batchedEntities)
-            {
-                using(Context = new TContext())
+            using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
+            { // Create a maximum batch count that is 100 or the number of entities to save. Which ever is less.
+                // The number 100 is based on several StackOverflow posts that have indicated that their benchmarks for batch saves were best optimized at 100
+                // http://stackoverflow.com/questions/5940225/fastest-way-of-inserting-in-entity-framework
+                var batchedEntities = entities.ToBatch(100);
+                foreach(var batchEntityList in batchedEntities)
                 {
-                    // Turn off all the fluff of Entity Framework since we are taking responsibility for tracking our own changes.
-                    Context.Configuration.AutoDetectChangesEnabled = false;
-                    Context.Configuration.ProxyCreationEnabled = false;
-                    Context.Configuration.LazyLoadingEnabled = false;
-
-                    if(entState == EntityState.Added)
+                    using(Context = new TContext())
                     {
-                        Context.Set<TEntity>().AddRange(batchEntityList);
-                        await Context.SaveChangesAsync().ConfigureAwait(false);
+                        // Turn off all the fluff of Entity Framework since we are taking responsibility for tracking our own changes.
+                        Context.Configuration.AutoDetectChangesEnabled = false;
+                        Context.Configuration.ProxyCreationEnabled = false;
+                        Context.Configuration.LazyLoadingEnabled = false;
+                        if(entState == EntityState.Added)
+                        {
+                            Context.Set<TEntity>().AddRange(batchEntityList);
+                            await Context.SaveChangesAsync().ConfigureAwait(false);
 
-                        // Run through the same loop and Detach each of the saved entities from the context
-                        /*
+                            // Run through the same loop and Detach each of the saved entities from the context
+                            /*
                          * This technnique was determined through many hours of trial and error testing that determined that when we go through 
                          * this while loop more than once, there was STILL some left over change tracking occurring so some inserts would get added
                          * twice which would cause SaveChanges to fail.
@@ -161,16 +138,18 @@ namespace TestEf.ConsoleMain.Repo
                          * be left with just a raw object. You will need to get a fresh instance from the database after
                          * the insert in order to guarantee a full object.
                         */
-                        batchEntityList.ForEach(ent => Context.Entry(ent).State = EntityState.Detached);
+                            batchEntityList.ForEach(ent => Context.Entry(ent).State = EntityState.Detached);
+                        }
+                        else
+                        {
+                            // Attach each entity to the Context and Save
+                            batchEntityList.ForEach(ent => Context.Entry(ent).State = entState);
+                            await Context.SaveChangesAsync().ConfigureAwait(false);
+                        }
+                        Context.Dispose();
                     }
-                    else
-                    {
-                        // Attach each entity to the Context and Save
-                        batchEntityList.ForEach(ent => Context.Entry(ent).State = entState);
-                        await Context.SaveChangesAsync().ConfigureAwait(false);
-                    }
-                    Context.Dispose();
                 }
+                scope.Complete();
             }
 
             #region ---- Manual version of what's above (commented out) ----
@@ -277,40 +256,44 @@ namespace TestEf.ConsoleMain.Repo
         public virtual async Task UpdateCollectionAsync<TEntity>(List<TEntity> givenItems)
             where TEntity : class, IBaseEntity, IEquatable<TEntity>, new()
         {
-            // Limit the processing of the givenItems to a count of 500 max.
-            var batchedItems = givenItems.ToBatch(500);
+            using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
+            { // Limit the processing of the givenItems to a count of 500 max.
+                var batchedItems = givenItems.ToBatch(500);
+                foreach(var givenBatch in batchedItems)
+                {
+                    // Get the database versions of the givenItems for comparison. 
+                    List<TEntity> dbItems;
+                    var givenIds = givenBatch.Select(gi => gi.Id).ToList();
+                    using(Context = new TContext())
+                    {
+                        var query = from entity in Context.Set<TEntity>()
+                                    where givenIds.Contains(entity.Id)
+                                    select entity;
+                        var sw = new Stopwatch();
+                        sw.Start();
+                        dbItems = await query.ToListAsync().ConfigureAwait(false);
+                        sw.Stop();
+                        Console.WriteLine("\nTime to run the initial update query was {0} milliseconds", sw.ElapsedMilliseconds);
+                    }
 
-            foreach(var givenBatch in batchedItems)
-            {
-                // Get the database versions of the givenItems for comparison. 
-                List<TEntity> dbItems;
-                var givenIds = givenBatch.Select(gi => gi.Id).ToList();
-                using (Context = new TContext())
-                {
-                    var query = from entity in Context.Set<TEntity>()
-                                where givenIds.Contains(entity.Id)
-                                select entity;
-                    var sw = new Stopwatch();
-                    sw.Start();
-                    dbItems = await query.ToListAsync().ConfigureAwait(false);
-                    sw.Stop();
-                    Console.WriteLine("\nTime to run the initial update query was {0} milliseconds", sw.ElapsedMilliseconds);
+                    // Loop through the givenItems to see which ones need an update and which ones need an insert
+                    var inserts = givenBatch.Where(gi => gi.Id == 0).ToList();
+                    var updates = new List<TEntity>();
+                    if(dbItems.Count > 0)
+                    {
+                        updates = (from givenItem in givenBatch
+                                   let dbItem = dbItems.FirstOrDefault(di => di.Id == givenItem.Id)
+                                   where !givenItem.Equals(dbItem)
+                                   select givenItem).ToList();
+                        // Remove all objects from the update that are equal to any of the objects in the inserts.
+                        updates.RemoveAll(t => inserts.Any(i => t.Id == 0));
+                    }
+                    if(inserts.Count > 0)
+                        await SaveSqlEntitiesAsBatchAsync(inserts, EntityState.Added).ConfigureAwait(false);
+                    if(updates.Count > 0)
+                        await SaveSqlEntitiesAsBatchAsync(updates, EntityState.Modified).ConfigureAwait(false);
                 }
-
-                // Loop through the givenItems to see which ones need an update and which ones need an insert
-                var inserts = givenBatch.Where(gi => gi.Id == 0).ToList();
-                var updates = (from givenItem in givenBatch
-                               let dbItem = dbItems.FirstOrDefault(di => di.Id == givenItem.Id)
-                               where !givenItem.Equals(dbItem)
-                               select givenItem).ToList();
-                if (inserts.Count > 0)
-                {
-                    await SaveSqlEntitiesAsBatchAsync(inserts, EntityState.Added).ConfigureAwait(false);
-                }
-                if (updates.Count > 0)
-                {
-                    await SaveSqlEntitiesAsBatchAsync(updates, EntityState.Modified).ConfigureAwait(false);
-                }
+                scope.Complete();
             }
         }
 

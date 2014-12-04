@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
+using System.Transactions.Configuration;
 using Newtonsoft.Json;
 using TestEf.ConsoleMain.Identity;
 using TestEf.ConsoleMain.Repo;
@@ -54,10 +56,14 @@ namespace TestEf.ConsoleMain
                     TenantName = string.Format("Tenant {0}", i)
                 });
             }
-            using (var context = new MainDbContext())
+            using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
             {
-                context.Tenants.AddRange(tenants);
-                await context.SaveChangesAsync().ConfigureAwait(false);
+                using(var context = new MainDbContext())
+                {
+                    context.Tenants.AddRange(tenants);
+                    await context.SaveChangesAsync().ConfigureAwait(false);
+                }
+                scope.Complete();
             }
         }
 
@@ -80,7 +86,11 @@ namespace TestEf.ConsoleMain
 
                 // Getting all users by their Ids
                 var existingUsers = await usersRepo.GetByIdsAsync(allUserIds.ToArray()).ConfigureAwait(false);
-                await usersRepo.DeleteAsync(existingUsers).ConfigureAwait(false);
+                using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    await usersRepo.DeleteAsync(existingUsers).ConfigureAwait(false);
+                    scope.Complete();
+                }
             }
 
             // --- Next create the users --- //
@@ -139,7 +149,11 @@ namespace TestEf.ConsoleMain
 
             var sw = new Stopwatch();
             sw.Start();
-            await usersRepo.InsertAsync(users).ConfigureAwait(false);
+            using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                await usersRepo.InsertAsync(users).ConfigureAwait(false);
+                scope.Complete();
+            }
             sw.Stop();
             Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
 
@@ -193,13 +207,17 @@ namespace TestEf.ConsoleMain
                 currentUser.Emails.ForEach(eml => eml.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.PhoneNumbers.ForEach(p => p.LastModifiedOn = DateTimeOffset.UtcNow);
                 currentUser.LastModifiedOn = DateTimeOffset.UtcNow;
-                using (var context = new MainDbContext())
+                using(var scope = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled))
                 {
-                    //context.Users.Attach(currentUser);
-                    context.Entry(currentUser).State = EntityState.Modified;
-                    currentUser.Emails.ForEach(eml => context.Entry(eml).State = EntityState.Modified);
-                    currentUser.PhoneNumbers.ForEach(ph => context.Entry(ph).State = EntityState.Modified);
-                    context.SaveChanges();
+                    using(var context = new MainDbContext())
+                    {
+                        //context.Users.Attach(currentUser);
+                        context.Entry(currentUser).State = EntityState.Modified;
+                        currentUser.Emails.ForEach(eml => context.Entry(eml).State = EntityState.Modified);
+                        currentUser.PhoneNumbers.ForEach(ph => context.Entry(ph).State = EntityState.Modified);
+                        context.SaveChanges();
+                    }
+                    scope.Complete();
                 }
                 Console.WriteLine("The current user is:\n");
                 Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
