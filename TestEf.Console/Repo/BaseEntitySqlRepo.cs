@@ -4,10 +4,10 @@ using System.Data.Entity;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using TestEf.Console.Core;
-using TestEf.Console.Core.ExtensionMethods;
+using TestEf.ConsoleMain.Core;
+using TestEf.ConsoleMain.Core.ExtensionMethods;
 
-namespace TestEf.Console.Repo
+namespace TestEf.ConsoleMain.Repo
 {
     public abstract class BaseEntitySqlRepo<TModelObject, TContext> : IBaseEntityRepo<TModelObject, TContext> where TModelObject : class, IBaseEntity, new()
                                                                                                               where TContext : DbContext, new()
@@ -294,7 +294,7 @@ namespace TestEf.Console.Repo
                     sw.Start();
                     dbItems = await query.ToListAsync().ConfigureAwait(false);
                     sw.Stop();
-                    System.Console.WriteLine("\nTime to run the initial update query was {0} milliseconds", sw.ElapsedMilliseconds);
+                    Console.WriteLine("\nTime to run the initial update query was {0} milliseconds", sw.ElapsedMilliseconds);
                 }
 
                 // Loop through the givenItems to see which ones need an update and which ones need an insert

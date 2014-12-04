@@ -3,10 +3,10 @@ using System.Data.Entity;
 using System.Data.Entity.Migrations;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
-using TestEf.Console.Migrations;
-using TestEf.Console.Repo;
+using TestEf.ConsoleMain.Migrations;
+using TestEf.ConsoleMain.Repo;
 
-namespace TestEf.Console
+namespace TestEf.ConsoleMain
 {
     internal class Program
     {
@@ -24,24 +24,24 @@ namespace TestEf.Console
             var runtime = new Runtime();
 
             // Get the number of users
-            System.Console.WriteLine("How many users would you like to add?");
-            var userQtyValue = System.Console.ReadLine();
+            Console.WriteLine("How many users would you like to add?");
+            var userQtyValue = Console.ReadLine();
             int userQty;
             Int32.TryParse(userQtyValue, out userQty);
             userQty = userQty == 0 ? 20 : userQty;
 
             // Get the number of PhoneNumbers
-            System.Console.WriteLine("\nHow many phone numbers would you like to add?");
-            var phoneQtyValue = System.Console.ReadLine();
+            Console.WriteLine("\nHow many phone numbers would you like to add?");
+            var phoneQtyValue = Console.ReadLine();
             int phoneQty;
             Int32.TryParse(phoneQtyValue, out phoneQty);
             phoneQty = phoneQty == 0 ? 20 : phoneQty;
 
             await runtime.InitializeTenantsAsync();
-            System.Console.WriteLine("\nTenants Initialized");
+            Console.WriteLine("\nTenants Initialized");
 
             await runtime.InitializeUsersAsync(userQty, phoneQty);
-            System.Console.WriteLine("\nUsers Initialized\n");
+            Console.WriteLine("\nUsers Initialized\n");
 
             await runtime.TestUserInteractionAsync();
         }

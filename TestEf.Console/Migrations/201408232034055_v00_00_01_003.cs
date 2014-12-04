@@ -1,8 +1,7 @@
-namespace TestEf.Console.Migrations
+using System.Data.Entity.Migrations;
+
+namespace TestEf.ConsoleMain.Migrations
 {
-    using System;
-    using System.Data.Entity.Migrations;
-    
     public partial class v00_00_01_003 : DbMigration
     {
         public override void Up()

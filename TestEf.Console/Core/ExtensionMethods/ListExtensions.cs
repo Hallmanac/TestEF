@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace TestEf.Console.Core.ExtensionMethods
+namespace TestEf.ConsoleMain.Core.ExtensionMethods
 {
     public static class ListExtensions
     {

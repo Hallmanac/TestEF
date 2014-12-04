@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TestEf.Console.Core
+namespace TestEf.ConsoleMain.Core
 {
     public interface IBaseEntity
     {

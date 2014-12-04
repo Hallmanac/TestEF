@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using TestEf.Console.Core;
-using TestEf.Console.Repo;
-using TestEf.Console.Tenant;
+using TestEf.ConsoleMain.Core;
+using TestEf.ConsoleMain.Repo;
+using TestEf.ConsoleMain.Tenant;
 
-namespace TestEf.Console.Identity
+namespace TestEf.ConsoleMain.Identity
 {
     public class PhoneNumber : IBaseEntity, ITenant, IEquatable<PhoneNumber>, IUserManyToManyCollection
     {

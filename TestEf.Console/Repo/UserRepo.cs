@@ -4,11 +4,11 @@ using System.Data.Entity;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using TestEf.Console.Core;
-using TestEf.Console.Core.ExtensionMethods;
-using TestEf.Console.Identity;
+using TestEf.ConsoleMain.Core;
+using TestEf.ConsoleMain.Core.ExtensionMethods;
+using TestEf.ConsoleMain.Identity;
 
-namespace TestEf.Console.Repo
+namespace TestEf.ConsoleMain.Repo
 {
     public class UserRepo : BaseEntitySqlRepo<User, MainDbContext>
     {
@@ -124,7 +124,7 @@ namespace TestEf.Console.Repo
             sw.Start();
             await DeleteRemovedUserCollectionsAsync(givenItems).ConfigureAwait(false);
             sw.Stop();
-            System.Console.WriteLine("\nElapsed time for Delete Removed Emails was {0}", sw.ElapsedMilliseconds);
+            Console.WriteLine("\nElapsed time for Delete Removed Emails was {0}", sw.ElapsedMilliseconds);
             await UpdateCollectionAsync(givenItems).ConfigureAwait(false);
         }
 
@@ -213,7 +213,7 @@ namespace TestEf.Console.Repo
             }
             await SaveSqlEntitiesAsBatchAsync(itemsToDelete, EntityState.Deleted).ConfigureAwait(false);
             sw.Stop();
-            System.Console.WriteLine("\nElapsed update time in milliseconds was {0}", sw.ElapsedMilliseconds);
+            Console.WriteLine("\nElapsed update time in milliseconds was {0}", sw.ElapsedMilliseconds);
 
             #region --- Old way (commented out) ---
             //var sw = new Stopwatch();

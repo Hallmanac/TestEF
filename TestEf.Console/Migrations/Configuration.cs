@@ -1,9 +1,8 @@
-using TestEf.Console.Repo;
+using System.Data.Entity.Migrations;
+using TestEf.ConsoleMain.Repo;
 
-namespace TestEf.Console.Migrations
+namespace TestEf.ConsoleMain.Migrations
 {
-    using System.Data.Entity.Migrations;
-
     internal sealed class Configuration : DbMigrationsConfiguration<MainDbContext>
     {
         public Configuration()

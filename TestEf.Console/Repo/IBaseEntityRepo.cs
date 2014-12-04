@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
-using System.Linq;
 using System.Threading.Tasks;
-using TestEf.Console.Core;
+using TestEf.ConsoleMain.Core;
 
-namespace TestEf.Console.Repo
+namespace TestEf.ConsoleMain.Repo
 {
     public interface IBaseEntityRepo<TModelObject, out TContext> : IDisposable where TModelObject : class, IBaseEntity, new() where TContext : DbContext, new()
     {

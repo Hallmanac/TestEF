@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestEf.Console", "TestEf.Console\TestEf.Console.csproj", "{6DF4C2C4-F915-488C-8F10-E0495E39260A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestEf.ConsoleMain", "TestEf.Console\TestEf.ConsoleMain.csproj", "{6DF4C2C4-F915-488C-8F10-E0495E39260A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

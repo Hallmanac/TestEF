@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.Infrastructure.Annotations;
 using System.Data.Entity.ModelConfiguration;
-using TestEf.Console.Identity;
-using TestEf.Console.Tenant;
+using TestEf.ConsoleMain.Identity;
+using TestEf.ConsoleMain.Tenant;
 
-namespace TestEf.Console.Repo
+namespace TestEf.ConsoleMain.Repo
 {
     public class TenantInfoConfig : EntityTypeConfiguration<TenantInfo>
     {

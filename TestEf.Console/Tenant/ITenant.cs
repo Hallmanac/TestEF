@@ -1,4 +1,4 @@
-﻿namespace TestEf.Console.Tenant
+﻿namespace TestEf.ConsoleMain.Tenant
 {
     public interface ITenant
     {

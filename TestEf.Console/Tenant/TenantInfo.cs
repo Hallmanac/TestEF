@@ -1,7 +1,7 @@
 ﻿using System;
-using TestEf.Console.Core;
+using TestEf.ConsoleMain.Core;
 
-namespace TestEf.Console.Tenant
+namespace TestEf.ConsoleMain.Tenant
 {
     public class TenantInfo : IBaseEntity, IEquatable<TenantInfo>
     {

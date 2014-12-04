@@ -7,8 +7,8 @@
     <ProjectGuid>{6DF4C2C4-F915-488C-8F10-E0495E39260A}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TestEf.Console</RootNamespace>
-    <AssemblyName>TestEf.Console</AssemblyName>
+    <RootNamespace>TestEf.ConsoleMain</RootNamespace>
+    <AssemblyName>TestEf.ConsoleMain</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

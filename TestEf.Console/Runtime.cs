@@ -6,11 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using TestEf.Console.Identity;
-using TestEf.Console.Repo;
-using TestEf.Console.Tenant;
+using TestEf.ConsoleMain.Identity;
+using TestEf.ConsoleMain.Repo;
+using TestEf.ConsoleMain.Tenant;
 
-namespace TestEf.Console
+namespace TestEf.ConsoleMain
 {
     public class Runtime
     {
@@ -33,8 +33,8 @@ namespace TestEf.Console
 
             await usersRepo.SaveFullEntitiesAsync(allUsers);
 
-            System.Console.WriteLine("Users were updated to v2");
-            System.Console.ReadLine();
+            Console.WriteLine("Users were updated to v2");
+            Console.ReadLine();
         }
 
         public async Task InitializeTenantsAsync(int numberOfTenants = 5)
@@ -141,7 +141,7 @@ namespace TestEf.Console
             sw.Start();
             await usersRepo.InsertAsync(users).ConfigureAwait(false);
             sw.Stop();
-            System.Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
+            Console.WriteLine("\nUsers inserted in {0} milliseconds.", sw.ElapsedMilliseconds);
 
             //sw.Restart();
             //var returnedIds = users.Select(usr => usr.Id).ToList();
@@ -151,7 +151,7 @@ namespace TestEf.Console
             //System.Console.WriteLine("\nThe phone number of the first new user is {0}", newUsers.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
             //System.Console.WriteLine("The time taken to retrieve the new users was {0} milliseconds", sw.ElapsedMilliseconds);
 
-            System.Console.WriteLine("The 1st phone number of the 1st user is {0}", users.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
+            Console.WriteLine("The 1st phone number of the 1st user is {0}", users.FirstOrDefault().PhoneNumbers.FirstOrDefault().FormattedNumber);
 
             usersRepo.Dispose();
 
@@ -201,8 +201,8 @@ namespace TestEf.Console
                     currentUser.PhoneNumbers.ForEach(ph => context.Entry(ph).State = EntityState.Modified);
                     context.SaveChanges();
                 }
-                System.Console.WriteLine("The current user is:\n");
-                System.Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
+                Console.WriteLine("The current user is:\n");
+                Console.WriteLine(JsonConvert.SerializeObject(currentUser, Formatting.Indented,
                     new JsonSerializerSettings { PreserveReferencesHandling = PreserveReferencesHandling.Objects }));
             }
             var listOfUsers = new List<User>();
